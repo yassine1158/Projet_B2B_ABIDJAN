@@ -3,26 +3,30 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{app} — Entreprises et fournisseurs, en direct</title>
-  <meta name="description" content="Trouvez des fournisseurs vérifiés, publiez vos demandes de devis et comparez les offres. Fournisseurs : recevez des demandes qualifiées d'entreprises.">
+  <title>{app} — Entreprises et fournisseurs de Côte d'Ivoire</title>
+  <meta name="description" content="La plateforme B2B de Côte d'Ivoire : trouvez des fournisseurs vérifiés à Abidjan et dans tout le pays, publiez vos demandes de devis et comparez les offres en FCFA.">
+  <meta name="theme-color" content="#07170f">
   <link rel="icon" href="assets/img/logo.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/home.css">
 </head>
-<body data-page="home">
+<body data-page="home" class="home">
 
-<header class="header">
+<div class="kente-bar" aria-hidden="true"></div>
+
+<header class="header header-home" id="siteHeader">
   <div class="container nav">
     <a href="index.html" class="brand"><img src="assets/img/logo.svg" alt="" width="34" height="34"><span data-app-name></span></a>
     <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
     <nav class="nav-links">
-      <a href="#entreprises">Entreprises</a>
-      <a href="#fournisseurs">Fournisseurs</a>
+      <a href="#comment">Comment ça marche</a>
+      <a href="#pays">Tout le pays</a>
       <a href="catalogue.html">Catalogue</a>
       <a href="connexion.html" id="navAccount">Connexion</a>
-      <a href="connexion.html?mode=register" class="btn btn-accent btn-sm" id="navRegister">Inscription gratuite</a>
+      <a href="connexion.html?mode=register" class="btn btn-accent btn-sm btn-shine" id="navRegister">Inscription gratuite</a>
     </nav>
   </div>
 </header>
@@ -30,123 +34,223 @@
 <main>
   <div class="container" id="configNotice"></div>
 
-  <section class="hero">
-    <div class="container hero-grid">
-      <div>
-        <p class="eyebrow">Plateforme B2B · tous secteurs</p>
-        <h1>Les bons fournisseurs pour votre entreprise, <em>en quelques clics.</em></h1>
-        <p class="lead">Publiez votre besoin, recevez des offres de fournisseurs vérifiés et comparez-les au même endroit. Fournisseurs : accédez à des demandes réelles d'entreprises.</p>
-        <div class="hero-cta">
-          <a class="btn btn-accent" href="connexion.html?role=company">Je suis une entreprise</a>
-          <a class="btn btn-line" href="connexion.html?role=supplier">Je suis un fournisseur</a>
+  <!-- ===== HERO ===== -->
+  <section class="h-hero" id="hero">
+    <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="spotlight" aria-hidden="true"></div>
+    <div class="adinkra" aria-hidden="true"></div>
+
+    <div class="container h-hero-grid">
+      <div class="h-hero-copy">
+        <p class="pill reveal"><span class="flag" aria-hidden="true"><i></i><i></i><i></i></span> Abidjan · Côte d'Ivoire</p>
+        <h1 class="reveal" style="--d:.08s">
+          <span class="akwaba">Akwaba.</span>
+          Trouvez vos fournisseurs en
+          <span class="rotator" id="rotator" aria-live="polite"><span>cacao & café</span></span>
+        </h1>
+        <p class="h-lead reveal" style="--d:.16s">Publiez votre besoin, recevez les offres de fournisseurs ivoiriens vérifiés, comparez en FCFA et choisissez. Fournisseurs : accédez aux demandes réelles des entreprises, du Plateau à San-Pédro.</p>
+        <div class="hero-cta reveal" style="--d:.24s">
+          <a class="btn btn-accent btn-lg btn-shine magnetic" href="connexion.html?role=company">Je suis une entreprise <span aria-hidden="true">→</span></a>
+          <a class="btn btn-glass btn-lg magnetic" href="connexion.html?role=supplier">Je suis fournisseur</a>
         </div>
-        <ul class="hero-points">
-          <li>Inscription gratuite</li><li>Fournisseurs validés par notre équipe</li><li>Sans intermédiaire</li>
+        <ul class="h-points reveal" style="--d:.32s">
+          <li>Inscription gratuite</li><li>Fournisseurs vérifiés</li><li>0 FCFA de commission</li>
         </ul>
       </div>
-      <div class="hero-card" aria-hidden="true">
-        <div class="mock-head"><span class="tag">Emballage</span><span class="badge badge-ok">Ouverte</span></div>
-        <strong>5 000 cartons 40×30×20 cm</strong>
-        <p class="muted small">Livraison Abidjan · avant le 30 nov.</p>
-        <div class="mock-offer"><span>Fournisseur A</span><b>2 650 000 FCFA</b></div>
-        <div class="mock-offer best"><span>Fournisseur B</span><b>2 480 000 FCFA</b><i>Meilleure offre</i></div>
-        <div class="mock-offer"><span>Fournisseur C</span><b>2 790 000 FCFA</b></div>
+
+      <div class="h-hero-visual reveal" style="--d:.2s">
+        <div class="deal tilt" id="deal">
+          <div class="deal-glow" aria-hidden="true"></div>
+          <div class="deal-head"><span class="tag">Emballage</span><span class="live"><i></i> En direct</span></div>
+          <strong class="deal-title">5 000 cartons 40×30×20 cm</strong>
+          <p class="deal-sub">Livraison Zone industrielle de Yopougon · avant le 30 nov.</p>
+          <div class="deal-offers" id="dealOffers">
+            <div class="offer-row" style="--i:0"><span class="who"><b>KC</b>Koffi Cartonnage</span><b class="amt" data-to="2650000">0</b></div>
+            <div class="offer-row best" style="--i:1"><span class="who"><b>EP</b>Ébrié Pack SARL</span><b class="amt" data-to="2480000">0</b><em>Meilleure offre</em></div>
+            <div class="offer-row" style="--i:2"><span class="who"><b>SB</b>San-Pédro Box</span><b class="amt" data-to="2790000">0</b></div>
+          </div>
+          <div class="deal-foot"><span>3 offres reçues</span><span class="muted">en moins de 24 h</span></div>
+        </div>
+        <div class="float-chip chip-a"><span>✓</span> Fournisseur vérifié</div>
+        <div class="float-chip chip-b"><span>⚡</span> Nouvelle demande · BTP</div>
       </div>
+    </div>
+
+    <!-- Skyline du Plateau (Abidjan) sur la lagune Ébrié -->
+    <div class="skyline" aria-hidden="true">
+      <svg viewBox="0 0 1440 240" preserveAspectRatio="xMidYMax slice">
+        <defs>
+          <linearGradient id="sky-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#123a26"/><stop offset="1" stop-color="#0a2016"/></linearGradient>
+          <linearGradient id="lagoon" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d2a1c"/><stop offset="1" stop-color="#07170f"/></linearGradient>
+          <pattern id="win" width="10" height="12" patternUnits="userSpaceOnUse"><rect x="2" y="3" width="4" height="5" fill="#f2b705" opacity=".55"/></pattern>
+          <pattern id="win2" width="10" height="12" patternUnits="userSpaceOnUse"><rect x="2" y="3" width="4" height="5" fill="#ffd27a" opacity=".85"/></pattern>
+        </defs>
+        <g class="city" fill="url(#sky-b)">
+          <!-- arrière-plan -->
+          <g opacity=".55"><rect x="40" y="120" width="50" height="60"/><rect x="100" y="100" width="40" height="80"/><rect x="330" y="110" width="44" height="70"/><rect x="620" y="96" width="38" height="84"/><rect x="980" y="104" width="48" height="76"/><rect x="1190" y="112" width="40" height="68"/><rect x="1330" y="122" width="60" height="58"/></g>
+          <!-- Pyramide -->
+          <path d="M170 180 L196 96 L250 96 L276 180 Z"/>
+          <rect x="300" y="70" width="36" height="110"/>
+          <!-- Tour F (la plus haute) -->
+          <rect x="380" y="18" width="46" height="162"/><rect x="396" y="4" width="14" height="16"/>
+          <rect x="440" y="58" width="56" height="122"/>
+          <!-- Cathédrale Saint-Paul : mât incliné et haubans -->
+          <path d="M540 180 L560 130 L600 130 L620 180 Z"/>
+          <path d="M576 132 L640 22 L648 26 L590 132 Z"/>
+          <path d="M644 26 L700 180 M644 26 L676 180 M644 26 L652 180" stroke="#123a26" stroke-width="2" fill="none"/>
+          <rect x="720" y="66" width="40" height="114"/><rect x="770" y="86" width="60" height="94"/>
+          <rect x="845" y="40" width="42" height="140"/><path d="M845 40 L866 22 L887 40 Z"/>
+          <rect x="900" y="78" width="54" height="102"/>
+          <rect x="1050" y="60" width="44" height="120"/><rect x="1104" y="92" width="64" height="88"/>
+          <!-- Hôtel Ivoire -->
+          <rect x="1250" y="50" width="40" height="130"/><rect x="1244" y="44" width="52" height="8"/>
+        </g>
+        <g class="windows">
+          <rect x="384" y="30" width="38" height="140" fill="url(#win)"/>
+          <rect x="444" y="68" width="48" height="104" fill="url(#win2)" class="tw tw1"/>
+          <rect x="304" y="80" width="28" height="92" fill="url(#win)" class="tw tw2"/>
+          <rect x="849" y="52" width="34" height="120" fill="url(#win2)" class="tw tw3"/>
+          <rect x="1054" y="70" width="36" height="100" fill="url(#win)"/>
+          <rect x="1254" y="58" width="32" height="112" fill="url(#win2)" class="tw tw1"/>
+          <rect x="724" y="76" width="32" height="96" fill="url(#win)" class="tw tw2"/>
+        </g>
+        <!-- Pont -->
+        <path d="M0 196 Q360 176 720 196 T1440 196" stroke="#f77f00" stroke-width="2.5" fill="none" opacity=".75" class="bridge"/>
+        <rect x="0" y="180" width="1440" height="60" fill="url(#lagoon)"/>
+        <g fill="none" stroke="#f2b705" stroke-width="1.5" opacity=".35"><path class="ripple" d="M360 206 H470 M820 212 H900 M1230 204 H1310"/><path class="ripple" d="M100 222 H260 M600 226 H760 M1000 220 H1160"/></g>
+        <path class="boat" d="M-60 214 h40 l-6 8 h-28 z M-44 214 v-14 l12 14" fill="#f77f00"/>
+      </svg>
     </div>
   </section>
 
-  <section class="band">
-    <div class="container stats-row">
-      <div><b id="statSuppliers">✓</b><span>fournisseurs validés</span></div>
-      <div><b>3</b><span>étapes pour recevoir des offres</span></div>
-      <div><b>0</b><span>commission sur vos achats</span></div>
+  <!-- ===== Bandeau défilant des secteurs ===== -->
+  <section class="marquee" aria-label="Secteurs">
+    <div class="marquee-track">
+      <span>Cacao</span><span>Anacarde</span><span>Café</span><span>Hévéa</span><span>Huile de palme</span><span>BTP</span><span>Port d'Abidjan</span><span>Transit & logistique</span><span>Mines</span><span>Agro-industrie</span><span>Emballage</span><span>Textile & pagne</span><span>Énergie</span><span>Informatique</span>
+      <span aria-hidden="true">Cacao</span><span aria-hidden="true">Anacarde</span><span aria-hidden="true">Café</span><span aria-hidden="true">Hévéa</span><span aria-hidden="true">Huile de palme</span><span aria-hidden="true">BTP</span><span aria-hidden="true">Port d'Abidjan</span><span aria-hidden="true">Transit & logistique</span><span aria-hidden="true">Mines</span><span aria-hidden="true">Agro-industrie</span><span aria-hidden="true">Emballage</span><span aria-hidden="true">Textile & pagne</span><span aria-hidden="true">Énergie</span><span aria-hidden="true">Informatique</span>
     </div>
   </section>
 
-  <section class="section" id="entreprises">
-    <div class="container split">
-      <div>
-        <p class="eyebrow">Pour les entreprises</p>
-        <h2>Achetez mieux, sans perdre de temps</h2>
-        <ol class="steps">
-          <li><b>Publiez votre demande de devis</b><span>Produit ou service, quantité, lieu, date limite.</span></li>
-          <li><b>Recevez des offres</b><span>Les fournisseurs validés de la catégorie vous répondent : prix, délai, conditions.</span></li>
-          <li><b>Comparez et choisissez</b><span>Acceptez la meilleure offre ; vous obtenez directement les coordonnées du fournisseur.</span></li>
-        </ol>
-        <a class="btn btn-primary" href="connexion.html?role=company">Créer mon espace entreprise</a>
-      </div>
-      <div class="panel">
-        <h3>Votre espace entreprise</h3>
-        <ul class="checklist">
-          <li>Catalogue de fournisseurs avec recherche et filtres</li>
-          <li>Suivi de toutes vos demandes de devis</li>
-          <li>Offres classées du moins cher au plus cher</li>
-          <li>Historique de vos achats et de vos fournisseurs</li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <section class="section section-tint" id="fournisseurs">
-    <div class="container split split-rev">
-      <div class="panel">
-        <h3>Votre espace fournisseur</h3>
-        <ul class="checklist">
-          <li>Fiche entreprise et catalogue de produits visibles par les acheteurs</li>
-          <li>Demandes de devis de vos catégories, en temps réel</li>
-          <li>Envoi et suivi de vos offres</li>
-          <li>Coordonnées de l'acheteur dès que votre offre est retenue</li>
-        </ul>
-      </div>
-      <div>
-        <p class="eyebrow">Pour les fournisseurs</p>
-        <h2>Trouvez de nouveaux clients professionnels</h2>
-        <ol class="steps">
-          <li><b>Créez votre fiche</b><span>Activité, catégories, produits et services.</span></li>
-          <li><b>Faites-vous valider</b><span>Notre équipe vérifie votre entreprise pour garantir la qualité du réseau.</span></li>
-          <li><b>Répondez aux demandes</b><span>Envoyez vos offres et remportez des marchés.</span></li>
-        </ol>
-        <a class="btn btn-primary" href="connexion.html?role=supplier">Référencer mon entreprise</a>
-      </div>
-    </div>
-  </section>
-
-  <section class="section">
+  <!-- ===== Chiffres ===== -->
+  <section class="section facts">
     <div class="container">
-      <p class="eyebrow center">Tous les secteurs</p>
-      <h2 class="center">Parcourir par catégorie</h2>
+      <p class="eyebrow center reveal">Pourquoi la Côte d'Ivoire</p>
+      <h2 class="center reveal">La locomotive économique de l'Afrique de l'Ouest</h2>
+      <div class="facts-grid">
+        <div class="fact reveal tilt" style="--d:0s"><b>N°1</b><span>producteur mondial de cacao</span><i class="fact-ico">🍫</i></div>
+        <div class="fact reveal tilt" style="--d:.08s"><b>N°1</b><span>producteur mondial de noix de cajou</span><i class="fact-ico">🌰</i></div>
+        <div class="fact reveal tilt" style="--d:.16s"><b><span data-count="31">0</span></b><span>régions à connecter, d'Abidjan à Korhogo</span><i class="fact-ico">🗺️</i></div>
+        <div class="fact fact-accent reveal tilt" style="--d:.24s"><b><span data-count="0">0</span> FCFA</b><span>de commission sur vos achats</span><i class="fact-ico">🤝</i></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Comment ça marche ===== -->
+  <section class="section how" id="comment">
+    <div class="container">
+      <p class="eyebrow center reveal">Comment ça marche</p>
+      <h2 class="center reveal">Trois étapes, zéro intermédiaire</h2>
+      <div class="seg seg-how reveal" role="tablist" aria-label="Profil">
+        <button type="button" class="seg-btn" data-how="company" aria-pressed="true">Entreprise</button>
+        <button type="button" class="seg-btn" data-how="supplier" aria-pressed="false">Fournisseur</button>
+      </div>
+      <ol class="timeline" data-how-panel="company">
+        <li class="reveal"><span class="t-num">01</span><b>Publiez votre demande de devis</b><p>Produit ou service, quantité, lieu de livraison, date limite. En deux minutes.</p></li>
+        <li class="reveal" style="--d:.1s"><span class="t-num">02</span><b>Recevez les offres</b><p>Les fournisseurs vérifiés de la catégorie vous répondent : prix en FCFA, délai, conditions.</p></li>
+        <li class="reveal" style="--d:.2s"><span class="t-num">03</span><b>Comparez et choisissez</b><p>Offres classées de la moins chère à la plus chère. Acceptez : vous recevez le contact direct.</p></li>
+      </ol>
+      <ol class="timeline" data-how-panel="supplier" hidden>
+        <li><span class="t-num">01</span><b>Créez votre fiche</b><p>Activité, catégories, produits et services, zone de livraison.</p></li>
+        <li><span class="t-num">02</span><b>Faites-vous valider</b><p>Notre équipe vérifie votre entreprise pour garantir un réseau de confiance.</p></li>
+        <li><span class="t-num">03</span><b>Remportez des marchés</b><p>Répondez aux demandes de vos catégories et suivez vos offres en temps réel.</p></li>
+      </ol>
+      <div class="center reveal"><a class="btn btn-primary btn-lg btn-shine" href="connexion.html?mode=register" id="howCta">Commencer gratuitement</a></div>
+    </div>
+  </section>
+
+  <!-- ===== Carte ===== -->
+  <section class="section map-sec" id="pays">
+    <div class="container map-grid">
+      <div>
+        <p class="eyebrow reveal">Tout le pays</p>
+        <h2 class="reveal">De San-Pédro à Korhogo, <span class="grad">on est ensemble.</span></h2>
+        <p class="muted reveal">Le port de San-Pédro, les zones industrielles d'Abidjan, les bassins agricoles du centre et du nord : une seule plateforme relie acheteurs et fournisseurs dans toute la Côte d'Ivoire.</p>
+        <ul class="city-list reveal">
+          <li><i style="--c:var(--accent)"></i>Abidjan <small>hub économique et portuaire</small></li>
+          <li><i style="--c:var(--blue-2)"></i>San-Pédro <small>1er port mondial d'exportation du cacao</small></li>
+          <li><i style="--c:var(--gold)"></i>Bouaké · Yamoussoukro · Korhogo · Daloa · Man</li>
+        </ul>
+      </div>
+      <div class="map-wrap reveal">
+        <svg class="ci-map" viewBox="0 0 360 380" role="img" aria-label="Carte stylisée de la Côte d'Ivoire et de ses principales villes">
+          <defs>
+            <linearGradient id="ci-flag" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f77f00"/><stop offset=".333" stop-color="#f77f00"/><stop offset=".333" stop-color="#ffffff"/><stop offset=".666" stop-color="#ffffff"/><stop offset=".666" stop-color="#0a9a52"/><stop offset="1" stop-color="#0a9a52"/></linearGradient>
+            <pattern id="dots" width="9" height="9" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.3" fill="#0a7c42" opacity=".35"/></pattern>
+          </defs>
+          <path class="ci-shape" d="M66.1 360.6 L95.2 352.8 L115.4 340.5 L146.7 327.6 L173.6 320.3 L206.1 317.0 L235.2 312.5 L263.2 309.7 L277.8 313.6 L302.4 318.1 L313.6 319.2 L323.1 291.2 L317.5 268.8 L305.8 254.8 L308.0 229.6 L319.2 207.2 L331.0 179.2 L333.2 156.8 L340.5 140.0 L343.8 112.0 L336.6 84.0 L322.0 64.4 L291.2 50.4 L263.2 53.2 L244.7 67.2 L224.0 61.6 L201.6 28.0 L179.2 20.2 L156.8 28.0 L140.0 30.8 L114.8 25.2 L95.2 33.6 L61.6 19.6 L39.2 33.6 L33.6 56.0 L39.2 78.4 L28.0 100.8 L50.4 134.4 L28.0 145.6 L22.4 173.6 L14.0 190.4 L22.4 218.4 L44.8 252.0 L61.6 274.4 L70.0 302.4 L64.4 330.4 Z"/>
+          <path class="ci-dots" d="M66.1 360.6 L95.2 352.8 L115.4 340.5 L146.7 327.6 L173.6 320.3 L206.1 317.0 L235.2 312.5 L263.2 309.7 L277.8 313.6 L302.4 318.1 L313.6 319.2 L323.1 291.2 L317.5 268.8 L305.8 254.8 L308.0 229.6 L319.2 207.2 L331.0 179.2 L333.2 156.8 L340.5 140.0 L343.8 112.0 L336.6 84.0 L322.0 64.4 L291.2 50.4 L263.2 53.2 L244.7 67.2 L224.0 61.6 L201.6 28.0 L179.2 20.2 L156.8 28.0 L140.0 30.8 L114.8 25.2 L95.2 33.6 L61.6 19.6 L39.2 33.6 L33.6 56.0 L39.2 78.4 L28.0 100.8 L50.4 134.4 L28.0 145.6 L22.4 173.6 L14.0 190.4 L22.4 218.4 L44.8 252.0 L61.6 274.4 L70.0 302.4 L64.4 330.4 Z" fill="url(#dots)"/>
+          <g class="routes" fill="none" stroke="#f77f00" stroke-width="1.8" stroke-linecap="round">
+            <path d="M262 307 Q170 340 115 339" style="--r:0"/>
+            <path d="M262 307 Q230 260 191 223" style="--r:1"/>
+            <path d="M262 307 Q250 220 205 174" style="--r:2"/>
+            <path d="M262 307 Q250 150 172 75" style="--r:3"/>
+            <path d="M262 307 Q170 260 126 219" style="--r:4"/>
+            <path d="M262 307 Q140 250 64 190" style="--r:5"/>
+          </g>
+          <g class="cities">
+            <g class="city-pt big" transform="translate(262 307)"><circle r="16" class="pulse"/><circle r="6.5"/><text x="-10" y="-14" text-anchor="end">Abidjan</text></g>
+            <g class="city-pt" transform="translate(115 339)" style="--p:.3s"><circle r="11" class="pulse"/><circle r="4.5"/><text y="22" text-anchor="middle">San-Pédro</text></g>
+            <g class="city-pt" transform="translate(191 223)" style="--p:.6s"><circle r="11" class="pulse"/><circle r="4.5"/><text x="9" y="16">Yamoussoukro</text></g>
+            <g class="city-pt" transform="translate(205 174)" style="--p:.9s"><circle r="11" class="pulse"/><circle r="4.5"/><text x="9" y="-6">Bouaké</text></g>
+            <g class="city-pt" transform="translate(172 75)" style="--p:1.2s"><circle r="11" class="pulse"/><circle r="4.5"/><text x="9" y="-6">Korhogo</text></g>
+            <g class="city-pt" transform="translate(126 219)" style="--p:1.5s"><circle r="11" class="pulse"/><circle r="4.5"/><text x="-8" y="-8" text-anchor="end">Daloa</text></g>
+            <g class="city-pt" transform="translate(64 190)" style="--p:1.8s"><circle r="11" class="pulse"/><circle r="4.5"/><text x="-8" y="-8" text-anchor="end">Man</text></g>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Catégories ===== -->
+  <section class="section cats-sec">
+    <div class="container">
+      <p class="eyebrow center reveal">Tous les secteurs</p>
+      <h2 class="center reveal">Parcourir par catégorie</h2>
       <div class="cats" id="categories"></div>
     </div>
   </section>
 
   <section class="section section-tint" id="featuredWrap" hidden>
     <div class="container">
-      <h2 class="center">Ils sont déjà sur la plateforme</h2>
+      <h2 class="center reveal">Ils sont déjà sur la plateforme</h2>
       <div class="grid-cards" id="featured"></div>
       <p class="center"><a class="btn btn-outline" href="catalogue.html">Voir tout le catalogue</a></p>
     </div>
   </section>
 
-  <section class="cta">
-    <div class="container cta-inner">
-      <h2>Prêt à commencer ?</h2>
-      <p>L'inscription est gratuite pour les entreprises comme pour les fournisseurs.</p>
+  <!-- ===== Appel final ===== -->
+  <section class="h-cta">
+    <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="container h-cta-inner reveal">
+      <p class="pill"><span class="flag" aria-hidden="true"><i></i><i></i><i></i></span> Fait pour les entreprises ivoiriennes</p>
+      <h2>Vos prochains fournisseurs sont déjà là.<br><span class="grad">On est ensemble.</span></h2>
       <div class="hero-cta">
-        <a class="btn btn-accent" href="connexion.html?role=company">Je cherche des fournisseurs</a>
-        <a class="btn btn-line" href="connexion.html?role=supplier">Je suis fournisseur</a>
+        <a class="btn btn-accent btn-lg btn-shine magnetic" href="connexion.html?role=company">Je cherche des fournisseurs</a>
+        <a class="btn btn-glass btn-lg magnetic" href="connexion.html?role=supplier">Je suis fournisseur</a>
       </div>
     </div>
   </section>
 </main>
 
-<footer class="footer">
+<footer class="footer footer-dark">
   <div class="container footer-inner">
-    <div><strong data-app-name></strong><p data-app-tagline></p></div>
+    <div><strong data-app-name></strong><p data-app-tagline></p><p class="small">Abidjan · Côte d'Ivoire</p></div>
     <nav><a href="catalogue.html">Catalogue</a><a href="connexion.html">Connexion</a><a data-contact></a></nav>
-    <p class="muted small">© <span data-year></span> <span data-app-name></span></p>
+    <p class="small">© <span data-year></span> <span data-app-name></span></p>
   </div>
 </footer>
 
 <script type="module" src="assets/js/site.js"></script>
+<script type="module" src="assets/js/effects.js"></script>
 </body>
 </html>

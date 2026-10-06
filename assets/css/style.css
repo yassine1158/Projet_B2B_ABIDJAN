@@ -1,27 +1,31 @@
 /* Plateforme B2B — styles communs (site vitrine, connexion, espaces entreprise / fournisseur / admin) */
 :root {
-  --navy: #14296b;
-  --blue: #1d3a8a;
-  --blue-2: #2b50b8;
-  --accent: #f59e0b;
-  --accent-dark: #d97f06;
+  /* Couleurs de la Côte d'Ivoire : orange, blanc, vert + or du pagne kita */
+  --navy: #07170f;        /* nuit d'Abidjan (fonds sombres) */
+  --blue: #0a7c42;        /* vert ivoirien (action principale) */
+  --blue-2: #0b9a52;
+  --accent: #f77f00;      /* orange du drapeau */
+  --accent-dark: #d96a00;
+  --gold: #f2b705;
 
-  --ink: #0f172a;
-  --muted: #5b6477;
-  --line: #e2e6ef;
+  --ink: #0d1a14;
+  --muted: #5a6a62;
+  --line: #e2e9e4;
   --surface: #ffffff;
-  --tint: #f5f7fb;
-  --blue-soft: #e8eefc;
+  --tint: #f6f8f4;
+  --blue-soft: #e3f3e9;
 
-  --ok: #13795b;     --ok-soft: #e3f5ee;
-  --warn: #a45d00;   --warn-soft: #fff3dc;
+  --ok: #0a7c42;     --ok-soft: #e3f3e9;
+  --warn: #a45200;   --warn-soft: #fff1df;
   --danger: #c0392b; --danger-soft: #fdecea;
-  --info: #1d4ed8;   --info-soft: #e5edff;
+  --info: #0b6e8a;   --info-soft: #e2f3f7;
 
-  --f-display: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+  --kente: repeating-linear-gradient(90deg, #f77f00 0 26px, #f2b705 26px 34px, #0a7c42 34px 60px, #07170f 60px 66px, #fff 66px 70px, #07170f 70px 76px);
+
+  --f-display: "Bricolage Grotesque", "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
   --f-body: "Inter", "Segoe UI", system-ui, sans-serif;
   --radius: 14px;
-  --shadow: 0 1px 2px rgba(15, 23, 42, .05), 0 10px 30px -14px rgba(20, 41, 107, .25);
+  --shadow: 0 1px 2px rgba(7, 23, 15, .05), 0 12px 32px -14px rgba(7, 23, 15, .28);
   color-scheme: light;
 }
 
@@ -57,7 +61,7 @@ code { background: var(--tint); padding: 1px 6px; border-radius: 5px; font-size:
 .btn:disabled { opacity: .6; cursor: wait; transform: none; }
 .btn-primary { background: var(--blue); color: #fff; }
 .btn-primary:hover { background: var(--blue-2); }
-.btn-accent { background: var(--accent); color: #1a1205; }
+.btn-accent { background: var(--accent); color: #fff; }
 .btn-accent:hover { background: var(--accent-dark); color: #fff; }
 .btn-outline { background: transparent; color: var(--blue); border-color: var(--blue); }
 .btn-outline:hover { background: var(--blue); color: #fff; }
@@ -222,6 +226,9 @@ textarea.input { resize: vertical; }
 /* ===== Espaces connectés ===== */
 .app { background: var(--tint); min-height: 100vh; }
 .topbar { background: #fff; border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 40; }
+.topbar::before, .footer::before { content: ""; display: block; height: 4px; background: var(--kente); }
+.footer { position: relative; }
+.footer::before { position: absolute; top: 0; left: 0; right: 0; }
 .topbar-inner { display: flex; align-items: center; gap: 14px; height: 60px; }
 .role-pill { font: 700 .75rem var(--f-display); text-transform: uppercase; letter-spacing: .08em; color: var(--accent-dark); background: var(--warn-soft); padding: 4px 10px; border-radius: 999px; }
 .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; min-width: 0; }
@@ -240,7 +247,7 @@ textarea.input { resize: vertical; }
 
 /* ===== Connexion ===== */
 .auth-page { display: grid; grid-template-columns: minmax(300px, 420px) 1fr; min-height: 100vh; }
-.auth-side { background: radial-gradient(80% 60% at 100% 0%, rgba(43,80,184,.6), transparent 60%), var(--navy); color: #fff; padding: 40px; display: flex; flex-direction: column; justify-content: space-between; gap: 30px; }
+.auth-side { background: radial-gradient(70% 50% at 100% 0%, rgba(247,127,0,.45), transparent 60%), radial-gradient(70% 60% at 0% 100%, rgba(10,124,66,.55), transparent 60%), var(--navy); border-right: 6px solid; border-image: var(--kente) 1; color: #fff; padding: 40px; display: flex; flex-direction: column; justify-content: space-between; gap: 30px; }
 .auth-side h2 { font-size: 1.7rem; margin-bottom: 18px; }
 .auth-side .small { color: #aab6da; }
 .auth-main { padding: 28px 24px 60px; }
@@ -271,3 +278,5 @@ textarea.input { resize: vertical; }
   .feed li { flex-direction: column; gap: 2px; }
   .modal-body, .modal-head { padding-inline: 16px; }
 }
+
+.akwaba-sm { font: 800 1.5rem var(--f-display); background: linear-gradient(90deg, #f77f00, #f2b705 55%, #3ddc84); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 8px; }

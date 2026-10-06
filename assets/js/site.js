@@ -23,7 +23,7 @@ async function home() {
   $("#categories").innerHTML = cats.map(c => `<a class="cat" href="catalogue.html?cat=${encodeURIComponent(c)}">${esc(c)}</a>`).join("");
   const sup = await list("suppliers", where("status", "==", "approved")).catch(() => []);
   if (sup.length) {
-    $("#statSuppliers").textContent = sup.length;
+    const st = $("#statSuppliers"); if (st) st.textContent = sup.length;
     $("#featured").innerHTML = sup.slice(0, 6).map(s => `
       <a class="card" href="catalogue.html?q=${encodeURIComponent(s.name)}">
         <div class="card-top"><div class="avatar">${esc(s.name.slice(0, 1).toUpperCase())}</div>

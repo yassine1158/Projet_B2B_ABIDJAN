@@ -25,13 +25,15 @@ export const USE_EMULATORS = (() => {
 
 export const APP = {
   name: "B2B Connect",
-  tagline: "La plateforme qui relie les entreprises et les fournisseurs.",
+  tagline: "La plateforme B2B qui relie les entreprises et les fournisseurs de Côte d'Ivoire.",
   contactEmail: "contact@exemple.com",
   currencies: ["FCFA", "EUR", "USD", "GHS", "NGN", "MAD", "TND"],
 };
 
 // Catégories proposées tant que l'administrateur n'en a pas défini d'autres (onglet « Catégories » de l'admin)
 export const DEFAULT_CATEGORIES = [
+  "Cacao, café & anacarde",
+  "Hévéa & palmier à huile",
   "Matières premières",
   "Emballage",
   "Industrie & équipements",
@@ -44,7 +46,8 @@ export const DEFAULT_CATEGORIES = [
   "Électricité & électronique",
   "Informatique & logiciels",
   "Fournitures de bureau",
-  "Transport & logistique",
+  "Transport, transit & logistique",
+  "Mines & carrières",
   "Énergie",
   "Nettoyage & hygiène",
   "Sécurité",
