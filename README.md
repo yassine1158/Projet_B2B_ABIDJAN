@@ -31,6 +31,15 @@ Une vraie application Android, construite avec Capacitor à partir du site : mê
 
 ## Application iPhone (`mobile/ios/`)
 
+**Gratuit, tout de suite (Sideloadly)** : chaque modification publie `B2B-Connect-iPhone.ipa` dans *Releases* (version « iPhone … (Sideloadly) »). Sur un PC Windows ou un Mac :
+1. installer **iTunes** (depuis le site d'Apple) et **Sideloadly** ([sideloadly.io](https://sideloadly.io)) ;
+2. brancher l'iPhone en USB, ouvrir Sideloadly, glisser le fichier `.ipa`, saisir son identifiant Apple, *Start* ;
+3. sur l'iPhone : *Réglages → Général → VPN et gestion de l'appareil* → faire confiance au profil ; activer le *Mode développeur* si demandé (*Réglages → Confidentialité et sécurité*).
+
+Avec un identifiant Apple gratuit, l'app doit être réinstallée tous les 7 jours (limite d'Apple). Pour une installation durable : TestFlight ou App Store, ci-dessous.
+
+**TestFlight / App Store (compte payant)** :
+
 Même application, version iOS. Apple n'autorise l'installation sur iPhone qu'avec un **compte Apple Developer** (99 $ par an) :
 1. Créer le compte sur [developer.apple.com](https://developer.apple.com/programs/) (en tant qu'organisation ou particulier).
 2. Dans [App Store Connect](https://appstoreconnect.apple.com) : *Apps* → **+** → nouvelle app iOS, identifiant de bundle `ci.b2bconnect.app`, nom « B2B Connect ».

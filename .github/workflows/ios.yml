@@ -25,6 +25,9 @@ defaults:
   run:
     shell: bash
 
+permissions:
+  contents: write
+
 concurrency:
   group: ios
   cancel-in-progress: true
@@ -60,6 +63,33 @@ jobs:
           xcodebuild -project App.xcodeproj -scheme App -configuration Debug \
             -sdk iphonesimulator -destination "generic/platform=iOS Simulator" \
             CODE_SIGNING_ALLOWED=NO build | tail -30
+
+      # Fichier .ipa non signé : à installer gratuitement avec Sideloadly (PC) et un identifiant Apple ordinaire
+      - name: Construire l'IPA pour Sideloadly
+        working-directory: mobile/ios/App
+        run: |
+          xcodebuild -project App.xcodeproj -scheme App -configuration Release \
+            -sdk iphoneos -destination "generic/platform=iOS" -derivedDataPath "$RUNNER_TEMP/dd" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" MARKETING_VERSION="1.0.$BUILD_NUMBER" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build | tail -15
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -R "$RUNNER_TEMP/dd/Build/Products/Release-iphoneos/App.app" "$RUNNER_TEMP/ipa/Payload/"
+          (cd "$RUNNER_TEMP/ipa" && zip -qr "$GITHUB_WORKSPACE/B2B-Connect-iPhone.ipa" Payload)
+          ls -la "$GITHUB_WORKSPACE/B2B-Connect-iPhone.ipa"
+
+      - name: Publier l'IPA dans Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ios-v1.0.${{ github.run_number }}
+          name: B2B Connect iPhone 1.0.${{ github.run_number }} (Sideloadly)
+          make_latest: false
+          files: B2B-Connect-iPhone.ipa
+          body: |
+            Application iPhone de B2B Connect, à installer gratuitement avec **Sideloadly** (PC Windows ou Mac) et un identifiant Apple ordinaire.
+            1. Installer iTunes (site d'Apple, pas Microsoft Store) et Sideloadly (sideloadly.io).
+            2. Brancher l'iPhone en USB, ouvrir Sideloadly, glisser **B2B-Connect-iPhone.ipa**, saisir l'identifiant Apple, Start.
+            3. Sur l'iPhone : Réglages → Général → VPN et gestion de l'appareil → faire confiance au profil ; activer le Mode développeur si demandé.
+            Avec un compte Apple gratuit, l'app doit être réinstallée tous les 7 jours.
 
       - name: Clés Apple présentes ?
         id: keys
