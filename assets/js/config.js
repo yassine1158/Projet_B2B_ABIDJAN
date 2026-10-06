@@ -6,12 +6,12 @@
    ========================================================= */
 
 export const FIREBASE_CONFIG = {
-  apiKey: "VOTRE_API_KEY",
-  authDomain: "votre-projet.firebaseapp.com",
-  projectId: "votre-projet",
-  storageBucket: "votre-projet.appspot.com",
-  messagingSenderId: "000000000000",
-  appId: "1:000000000000:web:0000000000000000",
+  apiKey: "AIzaSyBh8g0scV5MbOJ7jzP6Ntk0HXeEoy5B0bI",
+  authDomain: "b2babidjan.firebaseapp.com",
+  projectId: "b2babidjan",
+  storageBucket: "b2babidjan.firebasestorage.app",
+  messagingSenderId: "885066302128",
+  appId: "1:885066302128:web:b5c40d093c63bc07547175",
 };
 
 // Développement local avec les émulateurs Firebase (npm run dev) : ouvrir http://localhost:5000/?emu
