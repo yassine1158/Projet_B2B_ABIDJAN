@@ -41,7 +41,9 @@ jobs:
 
       # Le SDK Android est déjà installé sur les machines ubuntu de GitHub (ANDROID_HOME)
       - name: Vérifier le SDK Android
-        run: echo "SDK : $ANDROID_HOME" && ls "$ANDROID_HOME/platforms" | tail -3
+        run: |
+          echo "SDK = $ANDROID_HOME"
+          ls "$ANDROID_HOME/platforms" | tail -3
 
       - name: Préparer l'application (site + couche app)
         working-directory: mobile
