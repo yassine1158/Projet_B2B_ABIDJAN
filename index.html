@@ -2,16 +2,10 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{app} — Entreprises et fournisseurs de Côte d'Ivoire</title>
   <meta name="description" content="La plateforme B2B de Côte d'Ivoire : trouvez des fournisseurs vérifiés à Abidjan et dans tout le pays, publiez vos demandes de devis et comparez les offres en FCFA.">
   <meta name="theme-color" content="#07170f">
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="B2B Connect">
   <link rel="icon" href="assets/img/logo.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,7 +25,6 @@
       <a href="#comment">Comment ça marche</a>
       <a href="#pays">Tout le pays</a>
       <a href="catalogue.html">Catalogue</a>
-      <a href="#" data-install hidden>📲 Installer l'app</a>
       <a href="connexion.html" id="navAccount">Connexion</a>
       <a href="connexion.html?mode=register" class="btn btn-accent btn-sm btn-shine" id="navRegister">Inscription gratuite</a>
     </nav>
@@ -60,11 +53,6 @@
           <a class="btn btn-accent btn-lg btn-shine magnetic" href="connexion.html?role=company">Je suis une entreprise <span aria-hidden="true">→</span></a>
           <a class="btn btn-glass btn-lg magnetic" href="connexion.html?role=supplier">Je suis fournisseur</a>
         </div>
-        <button type="button" class="install-card reveal" style="--d:.3s" data-install hidden>
-          <img src="assets/img/icon-192.png" alt="" width="44" height="44">
-          <span><b>Installer l'application</b><small>Gratuit · sur votre écran d'accueil, comme une vraie app</small></span>
-          <span class="install-go" aria-hidden="true">↓</span>
-        </button>
         <ul class="h-points reveal" style="--d:.32s">
           <li>Inscription gratuite</li><li>Fournisseurs vérifiés</li><li>0 FCFA de commission</li>
         </ul>
@@ -264,6 +252,5 @@
 
 <script type="module" src="assets/js/site.js"></script>
 <script type="module" src="assets/js/effects.js"></script>
-<script type="module" src="assets/js/pwa.js"></script>
 </body>
 </html>

@@ -20,15 +20,6 @@ Connexion / inscription : `connexion.html` (choix « entreprise » ou « fournis
 5. L'entreprise compare les offres (triées par prix) et en **accepte** une. Les autres sont refusées automatiquement et la demande passe à « Attribuée ».
 6. Les deux parties voient alors les **coordonnées** l'une de l'autre.
 
-## Application mobile (PWA)
-
-Le site s'installe comme une application, sans passer par un store :
-- **Android (Chrome)** : bouton « Installer l'app » sur le site, ou menu ⋮ → *Installer l'application*.
-- **iPhone (Safari)** : bouton *Partager* → *Sur l'écran d'accueil* (le site affiche ces instructions).
-
-L'application s'ouvre en plein écran, avec une barre d'onglets en bas dans les espaces entreprise, fournisseur et admin. Elle a aussi des fenêtres qui montent du bas et un bouton d'action flottant. Hors connexion, une page dédiée s'affiche. Fichiers : `manifest.webmanifest`, `sw.js`, `offline.html`, `assets/js/pwa.js`, icônes dans `assets/img/`.
-Pour mettre à jour le cache après de gros changements, incrémentez `VERSION` dans `sw.js`.
-
 ## Technique
 
 - Site statique (HTML/CSS/JavaScript, sans build). Il peut être hébergé sur **Firebase Hosting** ou sur **GitHub Pages**.

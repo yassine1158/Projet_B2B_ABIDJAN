@@ -6,7 +6,7 @@
 @keyframes kente { to { background-position: 152px 0; } }
 
 /* ===== En-tête transparent sur le hero, opaque au défilement ===== */
-.header-home { position: fixed; left: 0; right: 0; top: 5px; padding-top: env(safe-area-inset-top); background: transparent; border-color: transparent; backdrop-filter: none; transition: background .3s, border-color .3s, top .3s; }
+.header-home { position: fixed; left: 0; right: 0; top: 5px; background: transparent; border-color: transparent; backdrop-filter: none; transition: background .3s, border-color .3s, top .3s; }
 .header-home .brand, .header-home .nav-links a:not(.btn) { color: #fff; }
 .header-home .nav-toggle span { background: #fff; }
 .header-home.scrolled { top: 0; background: rgba(7, 23, 15, .82); backdrop-filter: blur(14px) saturate(1.4); border-bottom: 1px solid rgba(255,255,255,.08); }
