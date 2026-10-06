@@ -21,6 +21,7 @@ async function init() {
   [company, cats] = await Promise.all([get("companies", me.uid), categories()]);
   company ||= { name: auth.profile.displayName || me.email };
   $("#who").textContent = company.name;
+  renderStatus();
   tabs(name => {
     if (name === "catalogue" && !catalogueLoaded) { catalogueLoaded = true; mountCatalogue($("#catalogue"), { onQuote: s => rfqForm(null, s) }); }
   });
@@ -41,6 +42,14 @@ async function reload() {
 }
 
 const offersOf = id => offers.filter(o => o.rfqId === id);
+const approved = () => company.status === "approved";
+
+function renderStatus() {
+  $("#statusBox").innerHTML = {
+    approved: "",
+    suspended: `<div class="notice notice-danger"><strong>Compte suspendu.</strong> Vous ne pouvez plus publier de demandes de devis. Contactez-nous : <a href="mailto:${esc(APP.contactEmail)}">${esc(APP.contactEmail)}</a>.</div>`,
+  }[company.status] ?? `<div class="notice notice-warn"><strong>Compte en cours de validation.</strong> Vous pouvez déjà consulter le catalogue et compléter votre fiche. Vous pourrez publier des demandes de devis dès que notre équipe aura validé votre compte.</div>`;
+}
 
 function renderDashboard() {
   const open = rfqs.filter(r => r.status === "open").length;
@@ -73,6 +82,7 @@ function renderRfqs() {
 }
 
 function rfqForm(rfq = null, supplier = null) {
+  if (!rfq && !approved()) return toast(company.status === "suspended" ? "Votre compte est suspendu." : "Votre compte doit d'abord être validé par notre équipe.", "err");
   const r = rfq || { category: supplier?.categories?.[0] || "", currency: APP.currencies[0], city: company.city || "" };
   const dlg = modal(rfq ? "Modifier la demande" : "Nouvelle demande de devis", `
     ${supplier ? `<p class="notice">Votre demande sera visible par <strong>${esc(supplier.name)}</strong> et par tous les fournisseurs validés de la catégorie choisie.</p>` : ""}
@@ -133,7 +143,7 @@ async function rfqDetail(id) {
       </article>`).join("")}</div>` : `<p class="muted">Pas encore d'offre. Les fournisseurs validés de la catégorie « ${esc(r.category)} » voient votre demande.</p>`}
     <div class="form-actions">
       ${r.status === "open" ? `<button class="btn btn-ghost" data-edit>Modifier</button><button class="btn btn-ghost" data-close>Clôturer sans attribuer</button>` : ""}
-      ${r.status === "closed" ? `<button class="btn btn-ghost" data-reopen>Rouvrir</button>` : ""}
+      ${r.status === "closed" && approved() ? `<button class="btn btn-ghost" data-reopen>Rouvrir</button>` : ""}
       ${!os.length ? `<button class="btn btn-danger" data-del>Supprimer</button>` : ""}
     </div>`, { wide: true });
 
@@ -186,7 +196,7 @@ function renderProfile() {
     const v = formData(f);
     const btn = f.querySelector("button"); busy(btn, true);
     try {
-      await setDoc(doc(db, "companies", me.uid), { ...v, email: me.email, updatedAt: now(), ...(company.createdAt ? {} : { createdAt: now() }) }, { merge: true });
+      await setDoc(doc(db, "companies", me.uid), { ...v, email: me.email, updatedAt: now(), ...(company.createdAt ? {} : { createdAt: now(), status: "pending" }) }, { merge: true });
       Object.assign(company, v, { createdAt: company.createdAt || true });
       $("#who").textContent = company.name;
       toast("Fiche entreprise enregistrée.");

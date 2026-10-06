@@ -7,7 +7,7 @@ Plateforme B2B tous secteurs, en trois parties :
 | **Site vitrine** | `index.html`, `catalogue.html` | Tout le monde : présentation, catégories, catalogue public des fournisseurs validés |
 | **Espace entreprise** | `entreprise.html` | Entreprises : catalogue, demandes de devis, comparaison et acceptation des offres |
 | **Espace fournisseur** | `fournisseur.html` | Fournisseurs : fiche, produits & services, réponses aux demandes de devis |
-| Administration | `admin.html` | Équipe de la plateforme : validation des fournisseurs, suivi, catégories |
+| Administration | `admin.html` | Équipe de la plateforme : validation des fournisseurs et des entreprises, membres de l'équipe, demandes, catégories |
 
 Connexion / inscription : `connexion.html` (choix « entreprise » ou « fournisseur »).
 
@@ -15,7 +15,7 @@ Connexion / inscription : `connexion.html` (choix « entreprise » ou « fournis
 
 1. **Fournisseur** : il s'inscrit, choisit ses catégories, ajoute ses produits. Son compte reste **en attente** jusqu'à la validation par l'administrateur.
 2. **Administrateur** : il valide le fournisseur (onglet *Fournisseurs*). Sa fiche et ses produits apparaissent alors dans le catalogue.
-3. **Entreprise** : elle publie une **demande de devis** (catégorie, quantité, lieu, date limite, budget).
+3. **Entreprise** : elle s'inscrit, consulte le catalogue et, une fois **validée** par l'équipe, publie des **demandes de devis** (catégorie, quantité, lieu, date limite, budget).
 4. Les **fournisseurs validés** voient les demandes ouvertes (filtrées par défaut sur leurs catégories) et envoient **une offre** chacun (prix, délai, validité, conditions). Ils peuvent la modifier ou la retirer tant qu'elle est en attente.
 5. L'entreprise compare les offres (triées par prix) et en **accepte** une. Les autres sont refusées automatiquement et la demande passe à « Attribuée ».
 6. Les deux parties voient alors les **coordonnées** l'une de l'autre.
@@ -51,11 +51,12 @@ Connexion / inscription : `connexion.html` (choix « entreprise » ou « fournis
    ```
    Sans terminal, vous pouvez aussi copier le contenu de `firestore.rules` dans *Firestore → Règles → Publier*.
 6. **Mettre en ligne** avec `npx firebase deploy --only hosting` (adresse `https://<projet>.web.app`) ou avec GitHub Pages. Avec GitHub Pages ou un domaine personnel, ajoutez le domaine dans *Authentication → Paramètres → Domaines autorisés*.
-7. **Créer le compte administrateur** :
+7. **Créer le premier administrateur** (une seule fois) :
    1. inscrivez-vous normalement sur le site (comme entreprise) ;
    2. dans la console Firebase, ouvrez *Firestore → `users` → votre document* ;
    3. remplacez `role` par `admin` ;
    4. reconnectez-vous : vous arrivez sur `admin.html`.
+8. **Ajouter l'équipe depuis le site** : chaque membre crée un compte sur le site, puis un administrateur l'ajoute dans *Administration → Équipe* (par e-mail). Le membre se déconnecte et se reconnecte pour accéder à l'administration. « Retirer » lui rend son compte d'origine. Un administrateur ne peut pas se retirer lui-même.
 
 ## Développement local
 

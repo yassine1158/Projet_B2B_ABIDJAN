@@ -37,7 +37,7 @@ async function createProfile(user, v) {
   if (v.role === "supplier") {
     await setDoc(doc(db, "suppliers", user.uid), { ...base, website: "", categories: v.categories || [], status: "pending" });
   } else {
-    await setDoc(doc(db, "companies", user.uid), { ...base, sector: v.sector || "" });
+    await setDoc(doc(db, "companies", user.uid), { ...base, sector: v.sector || "", status: "pending" });
   }
 }
 
@@ -129,6 +129,7 @@ async function init() {
       </div>
       <label class="check"><input type="checkbox" name="terms" value="ok" required> J'accepte les conditions d'utilisation de la plateforme.</label>
       <p class="muted small" data-for="supplier">Votre fiche fournisseur sera visible dans le catalogue après validation par notre équipe.</p>
+      <p class="muted small" data-for="company">Vous pourrez publier des demandes de devis dès que notre équipe aura validé votre compte (vous pouvez déjà consulter le catalogue).</p>
       <button class="btn btn-accent btn-block">Créer mon compte</button>
     </form>`;
 

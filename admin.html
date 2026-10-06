@@ -21,9 +21,10 @@
   <nav class="container app-tabs" role="tablist">
     <button class="tab" role="tab" data-tab="accueil">Vue d'ensemble</button>
     <button class="tab" role="tab" data-tab="fournisseurs">Fournisseurs <span class="count" id="pendingCount"></span></button>
-    <button class="tab" role="tab" data-tab="entreprises">Entreprises</button>
+    <button class="tab" role="tab" data-tab="entreprises">Entreprises <span class="count" id="coPendingCount"></span></button>
     <button class="tab" role="tab" data-tab="demandes">Demandes de devis</button>
     <button class="tab" role="tab" data-tab="categories">Catégories</button>
+    <button class="tab" role="tab" data-tab="equipe">Équipe</button>
   </nav>
 </header>
 <main class="container app-main">
@@ -44,7 +45,14 @@
     <div id="supplierList"></div>
   </section>
   <section data-panel="entreprises" hidden>
-    <div class="page-head"><h1>Entreprises</h1></div>
+    <div class="page-head"><h1>Entreprises</h1>
+      <div class="seg" role="group" aria-label="Filtrer">
+        <button type="button" class="seg-btn" data-cf="pending" aria-pressed="true">À valider</button>
+        <button type="button" class="seg-btn" data-cf="approved" aria-pressed="false">Validées</button>
+        <button type="button" class="seg-btn" data-cf="suspended" aria-pressed="false">Suspendues</button>
+        <button type="button" class="seg-btn" data-cf="all" aria-pressed="false">Toutes</button>
+      </div>
+    </div>
     <div id="companyList"></div>
   </section>
   <section data-panel="demandes" hidden>
@@ -54,6 +62,16 @@
   <section data-panel="categories" hidden>
     <div class="page-head"><h1>Catégories</h1></div>
     <form class="card stack" id="catForm"></form>
+  </section>
+  <section data-panel="equipe" hidden>
+    <div class="page-head"><h1>Équipe d'administration</h1></div>
+    <form class="card stack" id="teamForm">
+      <h2 class="h3">Ajouter un membre</h2>
+      <p class="muted small">La personne crée d'abord un compte sur le site (entreprise ou fournisseur) avec son e-mail, puis vous l'ajoutez ici. Elle pourra valider les fournisseurs et les entreprises, gérer les demandes et les catégories.</p>
+      <div class="filters"><input class="input" type="email" name="email" required placeholder="E-mail du membre" aria-label="E-mail du membre"><button class="btn btn-primary">Ajouter à l'équipe</button></div>
+    </form>
+    <h2 class="h3" style="margin:22px 0 12px">Membres</h2>
+    <div id="teamList"></div>
   </section>
 </main>
 <script type="module" src="assets/js/admin.js"></script>

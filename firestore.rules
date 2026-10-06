@@ -2,7 +2,7 @@ rules_version = '2';
 
 // Règles de sécurité de la plateforme.
 // Rôles (champ users/{uid}.role) : "company" (entreprise), "supplier" (fournisseur), "admin".
-// Le rôle "admin" ne peut être attribué que depuis la console Firebase.
+// Le premier administrateur est nommé depuis la console Firebase ; les suivants depuis l'onglet « Équipe » de l'admin.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -16,6 +16,10 @@ service cloud.firestore {
     function isCompany() { return hasProfile() && role() == "company"; }
     function isSupplier() { return hasProfile() && role() == "supplier"; }
     function supplierStatus(id) { return get(/databases/$(database)/documents/suppliers/$(id)).data.status; }
+    function isApprovedCompany() {
+      return isCompany() && exists(/databases/$(database)/documents/companies/$(uid()))
+        && get(/databases/$(database)/documents/companies/$(uid())).data.status == "approved";
+    }
     function isApprovedSupplier() {
       return isSupplier() && exists(/databases/$(database)/documents/suppliers/$(uid())) && supplierStatus(uid()) == "approved";
     }
@@ -40,7 +44,9 @@ service cloud.firestore {
       allow create: if signedIn() && uid() == userId
         && data().role in ["company", "supplier"]
         && data().keys().hasOnly(["role", "email", "displayName", "createdAt"]);
-      allow update: if (signedIn() && uid() == userId && !changed().hasAny(["role"])) || isAdmin();
+      allow update: if (signedIn() && uid() == userId && !changed().hasAny(["role", "previousRole"]))
+        // Un administrateur nomme ou retire les membres de l'équipe, mais ne peut pas se retirer lui-même
+        || (isAdmin() && (uid() != userId || data().role == "admin"));
       allow delete: if isAdmin();
     }
 
@@ -48,8 +54,12 @@ service cloud.firestore {
     match /companies/{companyId} {
       // Les coordonnées de l'entreprise sont visibles par les membres connectés (pour le suivi des offres acceptées)
       allow read: if hasProfile();
-      allow create: if isCompany() && uid() == companyId && validOrg(data()) && optStr(data(), "sector", 80);
-      allow update: if (isCompany() && uid() == companyId && validOrg(data()) && optStr(data(), "sector", 80)) || isAdmin();
+      // Comme les fournisseurs : inscription « en attente », validation par l'équipe
+      allow create: if isCompany() && uid() == companyId && data().status == "pending"
+        && validOrg(data()) && optStr(data(), "sector", 80);
+      allow update: if (isCompany() && uid() == companyId && !changed().hasAny(["status"])
+          && validOrg(data()) && optStr(data(), "sector", 80))
+        || isAdmin();
       allow delete: if isAdmin();
     }
 
@@ -90,8 +100,10 @@ service cloud.firestore {
     // ---------- Demandes de devis ----------
     match /rfqs/{rfqId} {
       allow read: if (signedIn() && resource.data.companyId == uid()) || isApprovedSupplier() || isAdmin();
-      allow create: if isCompany() && data().companyId == uid() && data().status == "open" && validRfq(data());
+      // Seules les entreprises validées publient (ou rouvrent) des demandes
+      allow create: if isApprovedCompany() && data().companyId == uid() && data().status == "open" && validRfq(data());
       allow update: if (isCompany() && resource.data.companyId == uid()
+          && (data().status != "open" || resource.data.status == "open" || isApprovedCompany())
           && !changed().hasAny(["companyId", "createdAt"])
           && data().status in ["open", "closed", "awarded"] && validRfq(data()))
         || isAdmin();

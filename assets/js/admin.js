@@ -1,18 +1,21 @@
 /* Espace administrateur : validation des fournisseurs, entreprises, demandes, catégories */
 import { doc, setDoc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { db, now, configured, requireRole, list, categories, logout } from "./firebase.js";
+import { db, now, configured, requireRole, list, where, categories, logout } from "./firebase.js";
 import {
   $, esc, brand, tabs, toast, modal, confirmBox, empty, badge, fmtDate, fmtMoney, byDateDesc, notConfigured,
 } from "./ui.js";
 
 brand();
-let suppliers = [], companies = [], rfqs = [], offers = [], products = [], supFilter = "pending";
+let me, suppliers = [], companies = [], rfqs = [], offers = [], products = [], admins = [], supFilter = "pending", coFilter = "pending";
+// Entreprises inscrites avant la validation des entreprises : considérées « en attente »
+const coStatus = c => c.status || "pending";
 
 async function init() {
   if (!configured) return notConfigured($("main"));
   const auth = await requireRole("admin");
   if (!auth) return;
-  $("#who").textContent = auth.user.email;
+  me = auth.user;
+  $("#who").textContent = me.email;
   $("#logout").onclick = logout;
   tabs();
   await reload();
@@ -21,20 +24,30 @@ async function init() {
     document.querySelectorAll("[data-sf]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
     renderSuppliers();
   }));
+  document.querySelectorAll("[data-cf]").forEach(b => (b.onclick = () => {
+    coFilter = b.dataset.cf;
+    document.querySelectorAll("[data-cf]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    renderCompanies();
+  }));
+  $("#teamForm").onsubmit = addAdmin;
   renderCategories();
 }
 
 async function reload() {
-  [suppliers, companies, rfqs, offers, products] = await Promise.all(
-    ["suppliers", "companies", "rfqs", "offers", "products"].map(c => list(c)));
+  [suppliers, companies, rfqs, offers, products, admins] = await Promise.all([
+    ...["suppliers", "companies", "rfqs", "offers", "products"].map(c => list(c)),
+    list("users", where("role", "==", "admin")),
+  ]);
   [suppliers, companies, rfqs, offers].forEach(a => a.sort(byDateDesc));
-  renderOverview(); renderSuppliers(); renderCompanies(); renderRfqs();
+  renderOverview(); renderSuppliers(); renderCompanies(); renderRfqs(); renderTeam();
 }
 
 function renderOverview() {
   const n = s => suppliers.filter(x => x.status === s).length;
+  const nc = s => companies.filter(c => coStatus(c) === s).length;
   $("#stats").innerHTML = `
-    <div class="stat"><span>${companies.length}</span>Entreprises</div>
+    <div class="stat"><span>${nc("approved")}</span>Entreprises validées</div>
+    <div class="stat stat-accent"><span>${nc("pending")}</span>Entreprises à valider</div>
     <div class="stat"><span>${n("approved")}</span>Fournisseurs validés</div>
     <div class="stat stat-accent"><span>${n("pending")}</span>Fournisseurs à valider</div>
     <div class="stat"><span>${products.length}</span>Produits</div>
@@ -42,9 +55,10 @@ function renderOverview() {
     <div class="stat"><span>${offers.length}</span>Offres envoyées</div>
     <div class="stat"><span>${offers.filter(o => o.status === "accepted").length}</span>Offres acceptées</div>`;
   $("#pendingCount").textContent = n("pending") || "";
+  $("#coPendingCount").textContent = nc("pending") || "";
   const recent = [
     ...suppliers.map(s => ({ t: s.createdAt, html: `Nouveau fournisseur : <strong>${esc(s.name)}</strong> ${badge(s.status)}` })),
-    ...companies.map(c => ({ t: c.createdAt, html: `Nouvelle entreprise : <strong>${esc(c.name)}</strong>` })),
+    ...companies.map(c => ({ t: c.createdAt, html: `Nouvelle entreprise : <strong>${esc(c.name)}</strong> ${badge(coStatus(c))}` })),
     ...rfqs.map(r => ({ t: r.createdAt, html: `Demande « ${esc(r.title)} » par ${esc(r.companyName)}` })),
   ].sort((a, b) => (b.t?.seconds || 0) - (a.t?.seconds || 0)).slice(0, 10);
   $("#activity").innerHTML = recent.length ? `<ul class="feed">${recent.map(a => `<li><span>${a.html}</span><span class="muted small">${fmtDate(a.t)}</span></li>`).join("")}</ul>` : empty("Aucune activité pour le moment.");
@@ -103,12 +117,66 @@ function viewSupplier(id) {
 }
 
 function renderCompanies() {
-  $("#companyList").innerHTML = companies.length ? `<div class="table-wrap"><table class="table">
-    <thead><tr><th>Entreprise</th><th>Contact</th><th>Secteur</th><th>Demandes</th><th>Inscrite le</th></tr></thead>
-    <tbody>${companies.map(c => `<tr><td><strong>${esc(c.name)}</strong><br><span class="muted small">${esc([c.city, c.country].filter(Boolean).join(", "))}</span></td>
+  const rows = companies.filter(c => coFilter === "all" || coStatus(c) === coFilter);
+  $("#companyList").innerHTML = rows.length ? `<div class="table-wrap"><table class="table">
+    <thead><tr><th>Entreprise</th><th>Contact</th><th>Secteur</th><th>Demandes</th><th>Inscrite le</th><th>Statut</th><th></th></tr></thead>
+    <tbody>${rows.map(c => `<tr><td><strong>${esc(c.name)}</strong><br><span class="muted small">${esc([c.city, c.country].filter(Boolean).join(", "))}</span>
+        ${c.description ? `<br><span class="muted small clamp">${esc(c.description)}</span>` : ""}</td>
       <td class="small">${esc(c.contactName)}<br>${esc(c.email)}<br>${esc(c.phone)}</td><td>${esc(c.sector || "—")}</td>
-      <td>${rfqs.filter(r => r.companyId === c.id).length}</td><td>${fmtDate(c.createdAt)}</td></tr>`).join("")}</tbody></table></div>`
-    : empty("Aucune entreprise inscrite.");
+      <td>${rfqs.filter(r => r.companyId === c.id).length}</td><td>${fmtDate(c.createdAt)}</td><td>${badge(coStatus(c))}</td>
+      <td class="nowrap">${coStatus(c) !== "approved" ? `<button class="btn btn-sm btn-primary" data-status="approved" data-id="${esc(c.id)}">Valider</button>` : ""}
+        ${coStatus(c) !== "suspended" ? `<button class="btn btn-sm btn-danger" data-status="suspended" data-id="${esc(c.id)}">Suspendre</button>` : ""}</td></tr>`).join("")}</tbody></table></div>`
+    : empty(coFilter === "pending" ? "Aucune entreprise en attente de validation." : "Aucune entreprise.");
+  $("#companyList").onclick = async e => {
+    const t = e.target.closest("[data-status]");
+    if (!t) return;
+    const c = companies.find(x => x.id === t.dataset.id);
+    if (t.dataset.status === "suspended" && !(await confirmBox(`Suspendre ${c.name} ? Elle ne pourra plus publier de demandes de devis.`))) return;
+    try {
+      await updateDoc(doc(db, "companies", c.id), { status: t.dataset.status, updatedAt: now() });
+      toast(t.dataset.status === "approved" ? `${c.name} est validée : elle peut publier des demandes de devis.` : `${c.name} est suspendue.`);
+      await reload();
+    } catch (err) { toast(err.message, "err"); }
+  };
+}
+
+const ROLE_LABEL = { company: "Entreprise", supplier: "Fournisseur" };
+
+function renderTeam() {
+  $("#teamList").innerHTML = `<div class="table-wrap"><table class="table">
+    <thead><tr><th>Membre</th><th>Compte d'origine</th><th>Depuis</th><th></th></tr></thead>
+    <tbody>${admins.map(a => `<tr><td><strong>${esc(a.displayName || "—")}</strong><br><span class="small">${esc(a.email)}</span></td>
+      <td>${esc(ROLE_LABEL[a.previousRole] || "—")}</td><td>${fmtDate(a.promotedAt || a.createdAt)}</td>
+      <td class="nowrap">${a.id === me.uid ? `<span class="muted small">Vous</span>` : `<button class="btn btn-sm btn-danger" data-remove="${esc(a.id)}">Retirer</button>`}</td></tr>`).join("")}
+    </tbody></table></div>`;
+  $("#teamList").onclick = async e => {
+    const t = e.target.closest("[data-remove]");
+    if (!t) return;
+    const a = admins.find(x => x.id === t.dataset.remove);
+    if (!(await confirmBox(`Retirer ${a.email} de l'équipe ? Son compte redevient un compte ${(ROLE_LABEL[a.previousRole] || "entreprise").toLowerCase()}.`))) return;
+    try {
+      await updateDoc(doc(db, "users", a.id), { role: a.previousRole || "company", previousRole: null, updatedAt: now() });
+      toast(`${a.email} ne fait plus partie de l'équipe.`);
+      await reload();
+    } catch (err) { toast(err.message, "err"); }
+  };
+}
+
+/** Nomme administrateur un utilisateur déjà inscrit, retrouvé par son e-mail. */
+async function addAdmin(e) {
+  e.preventDefault();
+  const email = e.target.email.value.trim().toLowerCase();
+  if (!email) return;
+  try {
+    const found = (await list("users", where("email", "==", email)))[0];
+    if (!found) return toast("Aucun compte avec cet e-mail. La personne doit d'abord s'inscrire sur le site.", "err");
+    if (found.role === "admin") return toast("Cette personne fait déjà partie de l'équipe.", "err");
+    if (!(await confirmBox(`Nommer ${email} administrateur ? Il pourra valider les fournisseurs et les entreprises.`))) return;
+    await updateDoc(doc(db, "users", found.id), { role: "admin", previousRole: found.role, promotedAt: now(), updatedAt: now() });
+    e.target.reset();
+    toast(`${email} fait maintenant partie de l'équipe. Il doit se déconnecter puis se reconnecter.`);
+    await reload();
+  } catch (err) { toast(err.message, "err"); }
 }
 
 function renderRfqs() {

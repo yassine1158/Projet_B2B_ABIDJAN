@@ -28,7 +28,8 @@ beforeEach(async () => {
     await setDoc(doc(db, "users/c2"), { role: "company" });
     await setDoc(doc(db, "users/s1"), { role: "supplier" });
     await setDoc(doc(db, "users/s2"), { role: "supplier" });
-    await setDoc(doc(db, "companies/c1"), org);
+    await setDoc(doc(db, "companies/c1"), { ...org, status: "approved" });
+    await setDoc(doc(db, "companies/c2"), { ...org, name: "Nouvelle SA", status: "pending" });
     await setDoc(doc(db, "suppliers/s1"), { ...org, name: "Pack SA", categories: ["Emballage"], status: "approved" });
     await setDoc(doc(db, "suppliers/s2"), { ...org, name: "Nouveau", categories: ["Emballage"], status: "pending" });
     await setDoc(doc(db, "rfqs/r1"), rfq);
@@ -144,4 +145,33 @@ test("seul l'administrateur modifie les catégories", async () => {
   await assertSucceeds(getDoc(doc(anon(), "settings/categories")));
   await assertFails(setDoc(doc(as("c1"), "settings/categories"), { list: ["X"] }));
   await assertSucceeds(setDoc(doc(as("admin"), "settings/categories"), { list: ["X"] }));
+});
+
+// ---- Validation des entreprises ----
+test("une entreprise s'inscrit « en attente » et ne peut pas se valider", async () => {
+  await setDoc(doc(as("c3"), "users/c3"), { role: "company", email: "c3@x" });
+  await assertFails(setDoc(doc(as("c3"), "companies/c3"), { ...org, status: "approved" }));
+  await assertSucceeds(setDoc(doc(as("c3"), "companies/c3"), { ...org, status: "pending" }));
+  await assertFails(updateDoc(doc(as("c2"), "companies/c2"), { status: "approved" }));
+  await assertSucceeds(updateDoc(doc(as("c2"), "companies/c2"), { description: "Usine" }));
+});
+
+test("une entreprise en attente ou suspendue ne publie pas de demande", async () => {
+  await assertFails(setDoc(doc(as("c2"), "rfqs/r5"), { ...rfq, companyId: "c2" }));
+  await assertSucceeds(updateDoc(doc(as("admin"), "companies/c2"), { status: "approved" }));
+  await assertSucceeds(setDoc(doc(as("c2"), "rfqs/r5"), { ...rfq, companyId: "c2" }));
+  await updateDoc(doc(as("c1"), "rfqs/r1"), { status: "closed" });
+  await updateDoc(doc(as("admin"), "companies/c1"), { status: "suspended" });
+  await assertFails(updateDoc(doc(as("c1"), "rfqs/r1"), { status: "open" }));
+});
+
+// ---- Équipe ----
+test("un administrateur nomme et retire les membres de l'équipe", async () => {
+  await assertFails(updateDoc(doc(as("c1"), "users/c2"), { role: "admin" }));
+  await assertFails(updateDoc(doc(as("c2"), "users/c2"), { previousRole: "admin" }));
+  await assertSucceeds(updateDoc(doc(as("admin"), "users/c2"), { role: "admin", previousRole: "company" }));
+  await assertSucceeds(getDocs(query(collection(as("c2"), "users"), where("role", "==", "admin"))));
+  await assertSucceeds(updateDoc(doc(as("admin"), "users/c2"), { role: "company", previousRole: null }));
+  await assertFails(updateDoc(doc(as("admin"), "users/admin"), { role: "company" }));
+  await assertFails(getDocs(query(collection(as("c1"), "users"), where("role", "==", "admin"))));
 });
