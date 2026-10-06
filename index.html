@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{app} — Entreprises et fournisseurs, en direct</title>
+  <meta name="description" content="Trouvez des fournisseurs vérifiés, publiez vos demandes de devis et comparez les offres. Fournisseurs : recevez des demandes qualifiées d'entreprises.">
+  <link rel="icon" href="assets/img/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-page="home">
+
+<header class="header">
+  <div class="container nav">
+    <a href="index.html" class="brand"><img src="assets/img/logo.svg" alt="" width="34" height="34"><span data-app-name></span></a>
+    <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
+    <nav class="nav-links">
+      <a href="#entreprises">Entreprises</a>
+      <a href="#fournisseurs">Fournisseurs</a>
+      <a href="catalogue.html">Catalogue</a>
+      <a href="connexion.html" id="navAccount">Connexion</a>
+      <a href="connexion.html?mode=register" class="btn btn-accent btn-sm" id="navRegister">Inscription gratuite</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="container" id="configNotice"></div>
+
+  <section class="hero">
+    <div class="container hero-grid">
+      <div>
+        <p class="eyebrow">Plateforme B2B · tous secteurs</p>
+        <h1>Les bons fournisseurs pour votre entreprise, <em>en quelques clics.</em></h1>
+        <p class="lead">Publiez votre besoin, recevez des offres de fournisseurs vérifiés et comparez-les au même endroit. Fournisseurs : accédez à des demandes réelles d'entreprises.</p>
+        <div class="hero-cta">
+          <a class="btn btn-accent" href="connexion.html?role=company">Je suis une entreprise</a>
+          <a class="btn btn-line" href="connexion.html?role=supplier">Je suis un fournisseur</a>
+        </div>
+        <ul class="hero-points">
+          <li>Inscription gratuite</li><li>Fournisseurs validés par notre équipe</li><li>Sans intermédiaire</li>
+        </ul>
+      </div>
+      <div class="hero-card" aria-hidden="true">
+        <div class="mock-head"><span class="tag">Emballage</span><span class="badge badge-ok">Ouverte</span></div>
+        <strong>5 000 cartons 40×30×20 cm</strong>
+        <p class="muted small">Livraison Sfax · avant le 30 nov.</p>
+        <div class="mock-offer"><span>Fournisseur A</span><b>4 250 TND</b></div>
+        <div class="mock-offer best"><span>Fournisseur B</span><b>3 980 TND</b><i>Meilleure offre</i></div>
+        <div class="mock-offer"><span>Fournisseur C</span><b>4 400 TND</b></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="container stats-row">
+      <div><b id="statSuppliers">✓</b><span>fournisseurs validés</span></div>
+      <div><b>3</b><span>étapes pour recevoir des offres</span></div>
+      <div><b>0</b><span>commission sur vos achats</span></div>
+    </div>
+  </section>
+
+  <section class="section" id="entreprises">
+    <div class="container split">
+      <div>
+        <p class="eyebrow">Pour les entreprises</p>
+        <h2>Achetez mieux, sans perdre de temps</h2>
+        <ol class="steps">
+          <li><b>Publiez votre demande de devis</b><span>Produit ou service, quantité, lieu, date limite.</span></li>
+          <li><b>Recevez des offres</b><span>Les fournisseurs validés de la catégorie vous répondent : prix, délai, conditions.</span></li>
+          <li><b>Comparez et choisissez</b><span>Acceptez la meilleure offre ; vous obtenez directement les coordonnées du fournisseur.</span></li>
+        </ol>
+        <a class="btn btn-primary" href="connexion.html?role=company">Créer mon espace entreprise</a>
+      </div>
+      <div class="panel">
+        <h3>Votre espace entreprise</h3>
+        <ul class="checklist">
+          <li>Catalogue de fournisseurs avec recherche et filtres</li>
+          <li>Suivi de toutes vos demandes de devis</li>
+          <li>Offres classées du moins cher au plus cher</li>
+          <li>Historique de vos achats et de vos fournisseurs</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-tint" id="fournisseurs">
+    <div class="container split split-rev">
+      <div class="panel">
+        <h3>Votre espace fournisseur</h3>
+        <ul class="checklist">
+          <li>Fiche entreprise et catalogue de produits visibles par les acheteurs</li>
+          <li>Demandes de devis de vos catégories, en temps réel</li>
+          <li>Envoi et suivi de vos offres</li>
+          <li>Coordonnées de l'acheteur dès que votre offre est retenue</li>
+        </ul>
+      </div>
+      <div>
+        <p class="eyebrow">Pour les fournisseurs</p>
+        <h2>Trouvez de nouveaux clients professionnels</h2>
+        <ol class="steps">
+          <li><b>Créez votre fiche</b><span>Activité, catégories, produits et services.</span></li>
+          <li><b>Faites-vous valider</b><span>Notre équipe vérifie votre entreprise pour garantir la qualité du réseau.</span></li>
+          <li><b>Répondez aux demandes</b><span>Envoyez vos offres et remportez des marchés.</span></li>
+        </ol>
+        <a class="btn btn-primary" href="connexion.html?role=supplier">Référencer mon entreprise</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <p class="eyebrow center">Tous les secteurs</p>
+      <h2 class="center">Parcourir par catégorie</h2>
+      <div class="cats" id="categories"></div>
+    </div>
+  </section>
+
+  <section class="section section-tint" id="featuredWrap" hidden>
+    <div class="container">
+      <h2 class="center">Ils sont déjà sur la plateforme</h2>
+      <div class="grid-cards" id="featured"></div>
+      <p class="center"><a class="btn btn-outline" href="catalogue.html">Voir tout le catalogue</a></p>
+    </div>
+  </section>
+
+  <section class="cta">
+    <div class="container cta-inner">
+      <h2>Prêt à commencer ?</h2>
+      <p>L'inscription est gratuite pour les entreprises comme pour les fournisseurs.</p>
+      <div class="hero-cta">
+        <a class="btn btn-accent" href="connexion.html?role=company">Je cherche des fournisseurs</a>
+        <a class="btn btn-line" href="connexion.html?role=supplier">Je suis fournisseur</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <div><strong data-app-name></strong><p data-app-tagline></p></div>
+    <nav><a href="catalogue.html">Catalogue</a><a href="connexion.html">Connexion</a><a data-contact></a></nav>
+    <p class="muted small">© <span data-year></span> <span data-app-name></span></p>
+  </div>
+</footer>
+
+<script type="module" src="assets/js/site.js"></script>
+</body>
+</html>

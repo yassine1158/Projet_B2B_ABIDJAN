@@ -1,0 +1,146 @@
+rules_version = '2';
+
+// Règles de sécurité de la plateforme.
+// Rôles (champ users/{uid}.role) : "company" (entreprise), "supplier" (fournisseur), "admin".
+// Le rôle "admin" ne peut être attribué que depuis la console Firebase.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Fonctions ----------
+    function signedIn() { return request.auth != null; }
+    function uid() { return request.auth.uid; }
+    function userDoc() { return get(/databases/$(database)/documents/users/$(uid())); }
+    function hasProfile() { return signedIn() && exists(/databases/$(database)/documents/users/$(uid())); }
+    function role() { return userDoc().data.role; }
+    function isAdmin() { return hasProfile() && role() == "admin"; }
+    function isCompany() { return hasProfile() && role() == "company"; }
+    function isSupplier() { return hasProfile() && role() == "supplier"; }
+    function supplierStatus(id) { return get(/databases/$(database)/documents/suppliers/$(id)).data.status; }
+    function isApprovedSupplier() {
+      return isSupplier() && exists(/databases/$(database)/documents/suppliers/$(uid())) && supplierStatus(uid()) == "approved";
+    }
+
+    function data() { return request.resource.data; }
+    function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
+    function str(f, max) { return f is string && f.size() <= max; }
+    function optStr(d, f, max) { return !(f in d) || d[f] == null || str(d[f], max); }
+    function optNum(d, f) { return !(f in d) || d[f] == null || (d[f] is number && d[f] >= 0); }
+
+    // Champs communs aux fiches entreprise et fournisseur
+    function validOrg(d) {
+      return str(d.name, 120) && d.name.size() > 0
+        && optStr(d, "contactName", 80) && optStr(d, "phone", 30) && optStr(d, "email", 120)
+        && optStr(d, "city", 60) && optStr(d, "country", 60) && optStr(d, "address", 160)
+        && optStr(d, "description", 2000);
+    }
+
+    // ---------- Comptes ----------
+    match /users/{userId} {
+      allow read: if signedIn() && (uid() == userId || isAdmin());
+      allow create: if signedIn() && uid() == userId
+        && data().role in ["company", "supplier"]
+        && data().keys().hasOnly(["role", "email", "displayName", "createdAt"]);
+      allow update: if (signedIn() && uid() == userId && !changed().hasAny(["role"])) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ---------- Entreprises ----------
+    match /companies/{companyId} {
+      // Les coordonnées de l'entreprise sont visibles par les membres connectés (pour le suivi des offres acceptées)
+      allow read: if hasProfile();
+      allow create: if isCompany() && uid() == companyId && validOrg(data()) && optStr(data(), "sector", 80);
+      allow update: if (isCompany() && uid() == companyId && validOrg(data()) && optStr(data(), "sector", 80)) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ---------- Fournisseurs ----------
+    match /suppliers/{supplierId} {
+      // Fiche publique une fois validée par l'administrateur
+      allow read: if resource.data.status == "approved" || (signedIn() && uid() == supplierId) || isAdmin();
+      allow create: if isSupplier() && uid() == supplierId && data().status == "pending"
+        && validOrg(data()) && data().categories is list && data().categories.size() <= 30 && optStr(data(), "website", 120);
+      // Le fournisseur modifie sa fiche mais jamais son statut
+      allow update: if (isSupplier() && uid() == supplierId && !changed().hasAny(["status"])
+          && validOrg(data()) && data().categories is list && data().categories.size() <= 30 && optStr(data(), "website", 120))
+        || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ---------- Produits & services ----------
+    match /products/{productId} {
+      // supplierApproved reflète le statut du fournisseur : l'admin le met à jour lors de la validation/suspension
+      allow read: if resource.data.supplierApproved == true
+        || (signedIn() && resource.data.supplierId == uid()) || isAdmin();
+      allow create: if isSupplier() && data().supplierId == uid()
+        && data().supplierApproved == (supplierStatus(uid()) == "approved")
+        && validProduct(data());
+      allow update: if (isSupplier() && resource.data.supplierId == uid() && data().supplierId == uid()
+          && data().supplierApproved == (supplierStatus(uid()) == "approved")
+          && validProduct(data()))
+        || isAdmin();
+      allow delete: if (isSupplier() && resource.data.supplierId == uid()) || isAdmin();
+
+      function validProduct(d) {
+        return str(d.name, 120) && d.name.size() > 0 && str(d.category, 80) && optStr(d, "description", 2000)
+          && optNum(d, "price") && optStr(d, "currency", 10) && optStr(d, "unit", 30) && optStr(d, "minOrder", 60)
+          && str(d.supplierName, 120);
+      }
+    }
+
+    // ---------- Demandes de devis ----------
+    match /rfqs/{rfqId} {
+      allow read: if (signedIn() && resource.data.companyId == uid()) || isApprovedSupplier() || isAdmin();
+      allow create: if isCompany() && data().companyId == uid() && data().status == "open" && validRfq(data());
+      allow update: if (isCompany() && resource.data.companyId == uid()
+          && !changed().hasAny(["companyId", "createdAt"])
+          && data().status in ["open", "closed", "awarded"] && validRfq(data()))
+        || isAdmin();
+      allow delete: if (signedIn() && resource.data.companyId == uid()) || isAdmin();
+
+      function validRfq(d) {
+        return str(d.title, 140) && d.title.size() > 0 && str(d.category, 80) && str(d.description, 4000)
+          && str(d.companyName, 120) && optStr(d, "city", 80) && optStr(d, "unit", 30) && optStr(d, "deadline", 10)
+          && optStr(d, "currency", 10) && optNum(d, "quantity") && optNum(d, "budget");
+      }
+    }
+
+    // ---------- Offres ----------
+    // Identifiant imposé : {rfqId}_{supplierId} → une seule offre par fournisseur et par demande
+    match /offers/{offerId} {
+      function rfq(id) { return get(/databases/$(database)/documents/rfqs/$(id)).data; }
+
+      allow read: if signedIn() && (resource.data.supplierId == uid() || resource.data.companyId == uid()) || isAdmin();
+
+      allow create: if isApprovedSupplier()
+        && offerId == data().rfqId + "_" + uid()
+        && data().supplierId == uid()
+        && data().status == "pending"
+        && rfq(data().rfqId).status == "open"
+        && data().companyId == rfq(data().rfqId).companyId
+        && validOffer(data());
+
+      allow update: if
+        // Le fournisseur modifie son offre tant qu'elle est en attente et que la demande est ouverte
+        (isApprovedSupplier() && resource.data.supplierId == uid() && resource.data.status == "pending"
+          && rfq(resource.data.rfqId).status == "open"
+          && changed().hasOnly(["price", "currency", "delay", "validity", "message", "updatedAt"]) && validOffer(data()))
+        // L'entreprise accepte ou refuse
+        || (isCompany() && resource.data.companyId == uid()
+          && changed().hasOnly(["status", "updatedAt"]) && data().status in ["accepted", "rejected"])
+        || isAdmin();
+
+      allow delete: if (signedIn() && resource.data.supplierId == uid() && resource.data.status == "pending") || isAdmin();
+
+      function validOffer(d) {
+        return d.price is number && d.price >= 0 && optStr(d, "currency", 10) && str(d.delay, 60)
+          && optStr(d, "validity", 60) && optStr(d, "message", 3000);
+      }
+    }
+
+    // ---------- Paramètres (catégories) ----------
+    match /settings/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

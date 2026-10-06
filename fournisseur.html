@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Espace fournisseur — {app}</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="assets/img/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="app">
+<header class="topbar">
+  <div class="container topbar-inner">
+    <a href="index.html" class="brand"><img src="assets/img/logo.svg" alt="" width="30" height="30"><span data-app-name></span></a>
+    <span class="role-pill">Espace fournisseur</span>
+    <div class="topbar-right"><span class="who" id="who"></span><button class="btn btn-sm btn-ghost" id="logout">Déconnexion</button></div>
+  </div>
+  <nav class="container app-tabs" role="tablist">
+    <button class="tab" role="tab" data-tab="accueil">Tableau de bord</button>
+    <button class="tab" role="tab" data-tab="demandes">Demandes de devis</button>
+    <button class="tab" role="tab" data-tab="offres">Mes offres</button>
+    <button class="tab" role="tab" data-tab="produits">Produits & services</button>
+    <button class="tab" role="tab" data-tab="fiche">Ma fiche</button>
+  </nav>
+</header>
+<main class="container app-main">
+  <div id="statusBox"></div>
+  <section data-panel="accueil">
+    <div class="page-head"><h1>Tableau de bord</h1></div>
+    <div class="stats" id="stats"></div>
+    <div class="card"><h2 class="h3">Nouvelles demandes dans vos catégories</h2><div id="latestRfqs"></div></div>
+  </section>
+  <section data-panel="demandes" hidden>
+    <div class="page-head"><h1>Demandes de devis ouvertes</h1></div>
+    <div class="filters">
+      <input type="search" class="input" id="rfqQ" placeholder="Rechercher une demande…" aria-label="Recherche">
+      <label class="check"><input type="checkbox" id="onlyMine" checked> Seulement mes catégories</label>
+    </div>
+    <div id="rfqList"></div>
+  </section>
+  <section data-panel="offres" hidden>
+    <div class="page-head"><h1>Mes offres</h1></div>
+    <div id="offerList"></div>
+  </section>
+  <section data-panel="produits" hidden>
+    <div class="page-head"><h1>Produits & services</h1><button class="btn btn-accent" id="newProduct">+ Ajouter</button></div>
+    <div id="productList"></div>
+  </section>
+  <section data-panel="fiche" hidden>
+    <div class="page-head"><h1>Ma fiche fournisseur</h1></div>
+    <div id="profile"></div>
+  </section>
+</main>
+<script type="module" src="assets/js/fournisseur.js"></script>
+</body>
+</html>

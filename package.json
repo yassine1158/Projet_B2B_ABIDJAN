@@ -1,0 +1,15 @@
+{
+  "name": "plateforme-b2b",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "firebase emulators:start --project demo-b2b",
+    "test": "firebase emulators:exec --only firestore --project demo-b2b \"node --test tests/rules.test.mjs\"",
+    "deploy": "firebase deploy"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^3.0.4",
+    "firebase": "^10.12.2",
+    "firebase-tools": "^13.35.1"
+  }
+}

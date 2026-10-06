@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Catalogue des fournisseurs — {app}</title>
+  <meta name="description" content="Catalogue des fournisseurs vérifiés et de leurs produits et services, tous secteurs.">
+  <link rel="icon" href="assets/img/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-page="catalogue">
+
+<header class="header">
+  <div class="container nav">
+    <a href="index.html" class="brand"><img src="assets/img/logo.svg" alt="" width="34" height="34"><span data-app-name></span></a>
+    <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
+    <nav class="nav-links">
+      <a href="index.html#entreprises">Entreprises</a>
+      <a href="index.html#fournisseurs">Fournisseurs</a>
+      <a href="catalogue.html" aria-current="page">Catalogue</a>
+      <a href="connexion.html" id="navAccount">Connexion</a>
+      <a href="connexion.html?mode=register" class="btn btn-accent btn-sm" id="navRegister">Inscription gratuite</a>
+    </nav>
+  </div>
+</header>
+
+<main class="section">
+  <div class="container">
+    <h1>Catalogue des fournisseurs</h1>
+    <p class="muted">Fournisseurs vérifiés par notre équipe. Pour recevoir plusieurs offres, <a href="connexion.html?role=company">publiez une demande de devis</a>.</p>
+    <div id="catalogue"></div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <div><strong data-app-name></strong><p data-app-tagline></p></div>
+    <nav><a href="index.html">Accueil</a><a href="connexion.html">Connexion</a><a data-contact></a></nav>
+    <p class="muted small">© <span data-year></span> <span data-app-name></span></p>
+  </div>
+</footer>
+
+<script type="module" src="assets/js/site.js"></script>
+</body>
+</html>
