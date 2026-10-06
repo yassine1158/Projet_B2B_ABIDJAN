@@ -36,6 +36,13 @@
   }
   new MutationObserver(labelTables).observe(document.documentElement, { childList: true, subtree: true });
 
+  // iPhone : texte de la barre d'état en sombre sur les pages blanches, en clair sur les pages sombres
+  var SB = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.StatusBar;
+  if (SB && Capacitor.getPlatform && Capacitor.getPlatform() === "ios") {
+    var dark = document.body.classList.contains("home") || document.body.classList.contains("auth-page");
+    SB.setStyle({ style: dark ? "DARK" : "LIGHT" }).catch(function () {});
+  }
+
   // Bouton retour Android : ferme la fenêtre ouverte, sinon revient en arrière, sinon quitte l'application
   var Cap = window.Capacitor;
   var App = Cap && Cap.Plugins && Cap.Plugins.App;

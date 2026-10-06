@@ -29,6 +29,17 @@ Une vraie application Android, construite avec Capacitor à partir du site : mê
 - `mobile/b2b-connect.keystore` est une clé de **test** (les nouvelles versions s'installent par-dessus les anciennes). Pour le **Play Store**, créez une clé privée conservée dans les secrets GitHub et produisez un fichier `.aab` signé (`./gradlew bundleRelease`).
 - En local (avec le SDK Android) : `cd mobile && npm install && npm run apk`.
 
+## Application iPhone (`mobile/ios/`)
+
+Même application, version iOS. Apple n'autorise l'installation sur iPhone qu'avec un **compte Apple Developer** (99 $ par an) :
+1. Créer le compte sur [developer.apple.com](https://developer.apple.com/programs/) (en tant qu'organisation ou particulier).
+2. Dans [App Store Connect](https://appstoreconnect.apple.com) : *Apps* → **+** → nouvelle app iOS, identifiant de bundle `ci.b2bconnect.app`, nom « B2B Connect ».
+3. *Utilisateurs et accès* → *Intégrations* → **Clés API App Store Connect** → générer une clé (accès *App Manager*). Noter le **Key ID**, l'**Issuer ID** et télécharger le fichier `.p8`.
+4. Dans GitHub : *Settings → Secrets and variables → Actions* → créer `APPLE_TEAM_ID`, `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8` (contenu du fichier `.p8`).
+5. Chaque modification déclenche `.github/workflows/ios.yml` : l'app est signée et envoyée sur **TestFlight**. Sur l'iPhone, installer l'app *TestFlight* d'Apple, accepter l'invitation, puis installer B2B Connect. Publication sur l'App Store ensuite depuis App Store Connect.
+
+Sans ces clés, le workflow vérifie seulement que l'app iOS se construit.
+
 ## Technique
 
 - Site statique (HTML/CSS/JavaScript, sans build). Il peut être hébergé sur **Firebase Hosting** ou sur **GitHub Pages**.

@@ -7,6 +7,12 @@ html.native { -webkit-tap-highlight-color: transparent; }
 .native .btn-sm { min-height: 40px; }
 .native .back { display: none; }
 
+/* iPhone : l'encoche et la barre d'état passent au-dessus de la page */
+.native .topbar { padding-top: env(safe-area-inset-top); }
+.native .header { padding-top: env(safe-area-inset-top); }
+.native .auth-main { padding-top: calc(28px + env(safe-area-inset-top)); }
+.native .auth-side { padding-top: calc(22px + env(safe-area-inset-top)); }
+
 /* Barre d'onglets en bas */
 .native .app { padding-bottom: calc(74px + env(safe-area-inset-bottom)); }
 .native .topbar-inner { height: 56px; }

@@ -1,0 +1,98 @@
+# Application iPhone (iOS) — construite sur un Mac de GitHub.
+# 1. « compiler » : vérifie à chaque modification que l'app iOS se construit (simulateur, sans signature).
+# 2. « testflight » : si les clés Apple sont configurées (secrets ci-dessous), signe l'app
+#    et l'envoie sur TestFlight ; elle s'installe ensuite sur iPhone avec l'app TestFlight d'Apple.
+#
+# Secrets à créer (Settings → Secrets and variables → Actions) :
+#   APPLE_TEAM_ID       identifiant d'équipe Apple Developer (10 caractères)
+#   ASC_KEY_ID          ID de la clé API App Store Connect
+#   ASC_ISSUER_ID       Issuer ID de la clé API
+#   ASC_KEY_P8          contenu du fichier AuthKey_XXXX.p8 (copier-coller tout le texte)
+name: Application iPhone
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "*.html"
+      - "assets/**"
+      - "mobile/**"
+      - ".github/workflows/ios.yml"
+  workflow_dispatch:
+
+# « shell: bash » active pipefail : une erreur de xcodebuild n'est pas masquée par « | tail »
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: ios
+  cancel-in-progress: true
+
+jobs:
+  ios:
+    runs-on: macos-latest
+    env:
+      BUILD_NUMBER: ${{ github.run_number }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Préparer l'application (site + couche app)
+        working-directory: mobile
+        run: |
+          npm ci
+          npm run build:www
+          npx cap sync ios
+
+      - name: Compiler pour le simulateur (vérification)
+        working-directory: mobile/ios/App
+        run: |
+          xcodebuild -project App.xcodeproj -scheme App -configuration Debug \
+            -sdk iphonesimulator -destination "generic/platform=iOS Simulator" \
+            CODE_SIGNING_ALLOWED=NO build | tail -30
+
+      - name: Clés Apple présentes ?
+        id: keys
+        run: |
+          if [ -n "$APPLE_TEAM_ID" ] && [ -n "$ASC_KEY_ID" ] && [ -n "$ASC_ISSUER_ID" ] && [ -n "$ASC_KEY_P8" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Clés Apple non configurées : l'app iOS est vérifiée mais pas envoyée sur TestFlight (voir le README)."
+          fi
+
+      - name: Signer et envoyer sur TestFlight
+        if: steps.keys.outputs.ok == 'true'
+        working-directory: mobile/ios/App
+        run: |
+          KEY="$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"
+          printf '%s\n' "$ASC_KEY_P8" > "$KEY"
+          AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$KEY" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+          xcodebuild -project App.xcodeproj -scheme App -configuration Release \
+            -destination "generic/platform=iOS" -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" MARKETING_VERSION="1.0.$BUILD_NUMBER" \
+            "${AUTH[@]}" archive | tail -30
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>$APPLE_TEAM_ID</string>
+            <key>signingStyle</key><string>automatic</string>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" "${AUTH[@]}"
+          rm -f "$KEY"

@@ -2,6 +2,11 @@
   "appId": "ci.b2bconnect.app",
   "appName": "B2B Connect",
   "webDir": "www",
+  "ios": {
+    "backgroundColor": "#07170f",
+    "contentInset": "never",
+    "scheme": "B2B Connect"
+  },
   "android": {
     "backgroundColor": "#07170f",
     "allowMixedContent": false
