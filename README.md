@@ -20,6 +20,15 @@ Connexion / inscription : `connexion.html` (choix « entreprise » ou « fournis
 5. L'entreprise compare les offres (triées par prix) et en **accepte** une. Les autres sont refusées automatiquement et la demande passe à « Attribuée ».
 6. Les deux parties voient alors les **coordonnées** l'une de l'autre.
 
+## Application Android (`mobile/`)
+
+Une vraie application Android, construite avec Capacitor à partir du site : mêmes pages, même compte, mêmes données.
+- **Télécharger l'APK** : onglet *Releases* du dépôt (`B2B-Connect.apk`). Sur le téléphone, ouvrez le fichier, autorisez « Installer des applications inconnues », puis *Installer*.
+- **Construction automatique** : à chaque modification du site ou de `mobile/`, GitHub Actions (`.github/workflows/android.yml`) construit l'APK et publie une nouvelle version dans *Releases*. On peut aussi lancer la construction à la main depuis l'onglet *Actions* (« Application Android » → *Run workflow*).
+- Dans l'app uniquement (`mobile/app/`) : barre d'onglets en bas, bouton d'action flottant, fenêtres qui montent du bas, tableaux en cartes, bouton retour Android, écran de démarrage et icône aux couleurs ivoiriennes. Le site web n'est pas modifié.
+- `mobile/b2b-connect.keystore` est une clé de **test** (les nouvelles versions s'installent par-dessus les anciennes). Pour le **Play Store**, créez une clé privée conservée dans les secrets GitHub et produisez un fichier `.aab` signé (`./gradlew bundleRelease`).
+- En local (avec le SDK Android) : `cd mobile && npm install && npm run apk`.
+
 ## Technique
 
 - Site statique (HTML/CSS/JavaScript, sans build). Il peut être hébergé sur **Firebase Hosting** ou sur **GitHub Pages**.

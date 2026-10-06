@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">B2B Connect</string>
+    <string name="title_activity_main">B2B Connect</string>
+    <string name="package_name">ci.b2bconnect.app</string>
+    <string name="custom_url_scheme">ci.b2bconnect.app</string>
+</resources>

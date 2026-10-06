@@ -1,0 +1,72 @@
+# Construit l'application Android (APK) à chaque modification du site ou de l'app,
+# puis la publie dans « Releases » : https://github.com/<compte>/<dépôt>/releases/latest
+name: Application Android
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "*.html"
+      - "assets/**"
+      - "mobile/**"
+      - ".github/workflows/android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    env:
+      VERSION_CODE: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Préparer l'application (site + couche app)
+        working-directory: mobile
+        run: |
+          npm ci
+          npm run build:www
+          npx cap sync android
+
+      - name: Construire l'APK
+        working-directory: mobile/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+          cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/B2B-Connect.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: B2B-Connect-apk
+          path: B2B-Connect.apk
+
+      - name: Publier dans Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-v1.0.${{ github.run_number }}
+          name: B2B Connect Android 1.0.${{ github.run_number }}
+          make_latest: true
+          files: B2B-Connect.apk
+          body: |
+            Application Android de B2B Connect.
+            Sur le téléphone : télécharger **B2B-Connect.apk**, l'ouvrir, autoriser « Installer des applications inconnues », puis Installer.

@@ -1,0 +1,52 @@
+/* Couche « application » : chargée uniquement dans l'APK Android */
+html.native { -webkit-tap-highlight-color: transparent; }
+.native body { overscroll-behavior-y: none; -webkit-user-select: none; user-select: none; }
+.native input, .native textarea, .native .pre, .native td, .native .kv { -webkit-user-select: text; user-select: text; }
+.native .input, .native select.input, .native textarea.input { font-size: 16px; }
+.native .btn { min-height: 44px; }
+.native .btn-sm { min-height: 40px; }
+.native .back { display: none; }
+
+/* Barre d'onglets en bas */
+.native .app { padding-bottom: calc(74px + env(safe-area-inset-bottom)); }
+.native .topbar-inner { height: 56px; }
+.native .topbar .brand span, .native .role-pill { display: none; }
+.native .app-tabs { position: fixed; z-index: 45; left: 0; right: 0; bottom: 0; width: 100%; margin: 0; gap: 0; justify-content: space-around; overflow: visible;
+  padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); background: rgba(255,255,255,.97); border-top: 1px solid var(--line); box-shadow: 0 -8px 24px -16px rgba(7,23,15,.35); }
+.native .tab { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 2px; border: 0; border-radius: 12px; font-size: .7rem; position: relative; }
+.native .tab-ico { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.native .tab-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.native .tab[aria-selected="true"] { color: var(--blue); background: var(--blue-soft); }
+.native .tab[aria-selected="true"] .tab-ico { stroke-width: 2.3; }
+.native .tab .count:not(:empty) { position: absolute; top: 2px; left: 54%; margin: 0; font-size: .62rem; padding: 0 5px; }
+.native .app-main { padding-top: 18px; }
+.native .page-head h1 { font-size: 1.45rem; }
+
+/* Bouton d'action flottant */
+.native .page-head .btn-accent { position: fixed; z-index: 44; right: 16px; bottom: calc(86px + env(safe-area-inset-bottom)); border-radius: 999px; padding: 14px 20px; box-shadow: 0 14px 30px -10px rgba(247,127,0,.8); }
+.native .toasts { bottom: calc(150px + env(safe-area-inset-bottom)); }
+
+.native .stats { grid-template-columns: 1fr 1fr; gap: 10px; }
+.native .stat { padding: 14px; }
+.native .stat span { font-size: 1.6rem; }
+
+/* Tableaux → cartes */
+.native .table-wrap { border: 0; background: none; overflow: visible; }
+.native .table, .native .table tbody, .native .table tr, .native .table td { display: block; width: 100%; }
+.native .table thead { display: none; }
+.native .table tr { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 6px 14px; margin-bottom: 12px; }
+.native .table td { border: 0; padding: 7px 0; display: flex; justify-content: space-between; gap: 14px; text-align: right; }
+.native .table td::before { content: attr(data-label); flex: none; color: var(--muted); font-size: .76rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; text-align: left; padding-top: 2px; }
+.native .table td:first-child { display: block; text-align: left; padding: 10px 0; border-bottom: 1px dashed var(--line); }
+.native .table td:first-child::before, .native .table td:not([data-label])::before { display: none; }
+.native .table td.nowrap { justify-content: flex-end; flex-wrap: wrap; white-space: normal; }
+
+/* Fenêtres qui montent du bas */
+.native .modal, .native .modal-wide { width: 100%; max-width: 100%; max-height: 92dvh; margin: auto 0 0; border-radius: 22px 22px 0 0; animation: native-sheet .32s cubic-bezier(.2,.8,.2,1); }
+.native .modal-head { padding-top: 22px; }
+.native .modal-head::before { content: ""; position: absolute; top: 7px; left: 50%; width: 42px; height: 5px; margin-left: -21px; border-radius: 3px; background: var(--line); }
+.native .modal .form-actions .btn { flex: 1; }
+@keyframes native-sheet { from { transform: translateY(100%); } }
+
+.native .seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.native .filters .input, .native .filters select.input { flex: 1 1 100%; }

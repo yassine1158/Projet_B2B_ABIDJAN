@@ -1,0 +1,23 @@
+{
+  "appId": "ci.b2bconnect.app",
+  "appName": "B2B Connect",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#07170f",
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "launchAutoHide": true,
+      "backgroundColor": "#07170f",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#07170f",
+      "overlaysWebView": false
+    }
+  }
+}
