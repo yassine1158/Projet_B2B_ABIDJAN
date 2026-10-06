@@ -27,7 +27,7 @@ export const APP = {
   name: "B2B Connect",
   tagline: "La plateforme qui relie les entreprises et les fournisseurs.",
   contactEmail: "contact@exemple.com",
-  currencies: ["TND", "EUR", "USD", "FCFA", "MAD", "DZD"],
+  currencies: ["FCFA", "EUR", "USD", "GHS", "NGN", "MAD", "TND"],
 };
 
 // Catégories proposées tant que l'administrateur n'en a pas défini d'autres (onglet « Catégories » de l'admin)
