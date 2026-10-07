@@ -48,18 +48,21 @@
   <section data-panel="accueil">
     <div class="page-head"><h1>Tableau de bord</h1></div>
     <div class="stats" id="stats"></div>
+    <div id="completeBox"></div>
     <div class="card"><h2 class="h3">Nouvelles demandes dans vos catégories</h2><div id="latestRfqs"></div></div>
+    <div id="myReviews"></div>
   </section>
   <section data-panel="demandes" hidden>
     <div class="page-head"><h1>Demandes de devis ouvertes</h1></div>
     <div class="filters">
       <input type="search" class="input" id="rfqQ" placeholder="Rechercher une demande…" aria-label="Recherche">
       <label class="check"><input type="checkbox" id="onlyMine" checked> Seulement mes catégories</label>
+      <label class="check"><input type="checkbox" id="noOffer"> Sans offre de ma part</label>
     </div>
     <div id="rfqList"></div>
   </section>
   <section data-panel="offres" hidden>
-    <div class="page-head"><h1>Mes offres</h1></div>
+    <div class="page-head"><h1>Mes offres</h1><button class="btn btn-ghost" id="exportOffers">⬇ Exporter (Excel)</button></div>
     <div id="offerList"></div>
   </section>
   <section data-panel="produits" hidden>

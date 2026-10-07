@@ -1,6 +1,6 @@
 /* Authentification (espaces entreprise, fournisseur, admin) + accès aux données de db.js */
 import {
-  getAuth, connectAuthEmulator, onAuthStateChanged, signOut,
+  getAuth, connectAuthEmulator, onAuthStateChanged, signOut, sendPasswordResetEmail,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-lite.js";
 import { USE_EMULATORS } from "./config.js";
@@ -67,3 +67,6 @@ export async function requireRole(role) {
 }
 
 export const logout = () => { clearCache(); return signOut(auth).then(() => location.replace("index.html")); };
+
+/** Envoie un e-mail pour choisir un nouveau mot de passe. */
+export const resetPassword = email => sendPasswordResetEmail(auth, email);

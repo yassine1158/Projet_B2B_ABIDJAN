@@ -113,3 +113,52 @@ export function brand() {
 export function notConfigured(container) {
   container.innerHTML = `<div class="notice notice-warn"><strong>Firebase n'est pas encore configuré.</strong> Renseignez votre configuration dans <code>assets/js/config.js</code> (voir le README).</div>`;
 }
+
+/** Télécharge un fichier CSV (séparateur « ; » et BOM UTF-8 : s'ouvre directement dans Excel). */
+export function downloadCSV(filename, rows) {
+  const cell = v => { const s = String(v ?? ""); return /[;"\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const csv = "﻿" + rows.map(r => r.map(cell).join(";")).join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  a.download = filename;
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+/** Étoiles de notation (note sur 5) */
+export function stars(avg, count) {
+  if (!count) return `<span class="stars muted small">Pas encore d'avis</span>`;
+  const full = Math.round(avg);
+  return `<span class="stars" title="${avg.toFixed(1)} / 5">${"★".repeat(full)}<i>${"★".repeat(5 - full)}</i> <small>${avg.toFixed(1)} (${count} avis)</small></span>`;
+}
+
+/** Moyennes des avis par fournisseur : { [supplierId]: { avg, count } } */
+export function ratingsBySupplier(reviews) {
+  const out = {};
+  for (const r of reviews) { const o = (out[r.supplierId] ||= { sum: 0, count: 0 }); o.sum += r.rating; o.count++; }
+  for (const k in out) out[k].avg = out[k].sum / out[k].count;
+  return out;
+}
+
+/** Échéance d'une demande : libellé court et style (expirée, aujourd'hui, J-n) */
+export function deadline(dateStr) {
+  if (!dateStr) return { label: "—", cls: "muted" };
+  const d = new Date(dateStr + "T23:59:59"), days = Math.ceil((d - Date.now()) / 86400000);
+  if (days < 0) return { label: "Expirée", cls: "danger" };
+  if (days === 0) return { label: "Aujourd'hui", cls: "warn" };
+  if (days <= 3) return { label: `J-${days}`, cls: "warn" };
+  return { label: `J-${days}`, cls: "muted" };
+}
+
+/** Taux de remplissage d'une fiche : { pct, missing: [libellés] } */
+export function completeness(obj, fields) {
+  const missing = fields.filter(([k]) => { const v = obj[k]; return Array.isArray(v) ? !v.length : !String(v ?? "").trim(); }).map(([, label]) => label);
+  return { pct: Math.round(100 * (fields.length - missing.length) / fields.length), missing };
+}
+
+export function completenessCard(c, tabName) {
+  if (c.pct >= 100) return "";
+  return `<div class="card complete-card"><div class="complete-head"><b>Fiche complétée à ${c.pct} %</b><button class="link" data-goto="${tabName}">Compléter →</button></div>
+    <div class="progress"><i style="width:${c.pct}%"></i></div>
+    <p class="muted small">À ajouter : ${c.missing.map(esc).join(", ")}. Une fiche complète inspire confiance et reçoit plus de réponses.</p></div>`;
+}

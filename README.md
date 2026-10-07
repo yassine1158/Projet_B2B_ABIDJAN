@@ -49,6 +49,21 @@ Même application, version iOS. Apple n'autorise l'installation sur iPhone qu'av
 
 Sans ces clés, le workflow vérifie seulement que l'app iOS se construit.
 
+## Outils des espaces entreprise et fournisseur
+
+**Entreprise** : montant engagé et fournisseurs retenus, demandes « Expirée » / J-n. Elle peut aussi :
+- **noter les fournisseurs** (★ 1 à 5 + commentaire) après une offre acceptée, avec une note visible dans le catalogue ;
+- marquer des **fournisseurs favoris** (★ dans le catalogue, vue « Favoris ») ;
+- **republier** une ancienne demande ;
+- **exporter vers Excel** (CSV) les demandes et les offres ;
+- suivre le **taux de remplissage de sa fiche** et **changer son mot de passe**.
+
+**Fournisseur** : taux de réussite, montant remporté, note moyenne et avis reçus, compte à rebours des demandes. Il peut aussi :
+- filtrer les demandes « sans offre de ma part » ;
+- marquer un produit **en rupture de stock** (visible dans le catalogue) ;
+- **exporter ses offres** vers Excel ;
+- suivre le taux de remplissage de sa fiche et changer son mot de passe.
+
 ## Messagerie (style Messenger)
 
 - Onglet **Messages** dans les espaces entreprise et fournisseur : liste des conversations, messages **en temps réel**, pastille des messages non lus, recherche. Sur smartphone, un seul panneau à la fois.

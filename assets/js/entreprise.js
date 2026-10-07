@@ -1,23 +1,24 @@
 /* Espace entreprise : catalogue, demandes de devis, offres reçues, fiche entreprise */
 import {
-  doc, addDoc, setDoc, updateDoc, deleteDoc, collection, writeBatch,
+  doc, addDoc, setDoc, updateDoc, deleteDoc, collection, writeBatch, arrayUnion, arrayRemove,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-lite.js";
-import { db, now, configured, requireRole, lastSession, list, get, where, categories, logout } from "./firebase.js";
+import { db, now, configured, requireRole, lastSession, list, get, where, categories, logout, resetPassword } from "./firebase.js";
 import { mountCatalogue } from "./catalogue.js";
 import { mountChat } from "./chat.js";
 import { swr, readCache, writeCache } from "./store.js";
 import { APP } from "./config.js";
 import {
   $, esc, brand, tabs, toast, modal, confirmBox, formData, busy, options, empty, badge, fmtDate, fmtMoney, byDateDesc, notConfigured,
+  downloadCSV, deadline, completeness, completenessCard,
 } from "./ui.js";
 
 brand();
-let me, myName, chat = null, showTab, company = {}, cats = [], rfqs = [], offers = [], catalogueLoaded = false, profileShown = false;
+let me, myName, chat = null, showTab, myReviews = [], favorites = new Set(), company = {}, cats = [], rfqs = [], offers = [], catalogueLoaded = false, profileShown = false;
 
 async function init() {
   if (!configured) return notConfigured($("main"));
   showTab = tabs(name => {
-    if (name === "catalogue" && !catalogueLoaded) { catalogueLoaded = true; mountCatalogue($("#catalogue"), { onQuote: s => rfqForm(null, s), onMessage: s => talkTo(s.id, s.name) }); }
+    if (name === "catalogue" && !catalogueLoaded) { catalogueLoaded = true; mountCatalogue($("#catalogue"), { onQuote: s => rfqForm(null, s), onMessage: s => talkTo(s.id, s.name), favorites, onFavorite: toggleFavorite }); }
     if (name === "messages") startChat();
   });
   // Affichage instantané des dernières données connues, pendant la vérification de la connexion
@@ -31,6 +32,8 @@ async function init() {
   categories().then(c => (cats = c));
   $("#newRfq").onclick = () => rfqForm();
   $("#newRfq2").onclick = () => rfqForm();
+  $("#exportRfqs").onclick = exportCSV;
+  document.addEventListener("click", e => { const g = e.target.closest("[data-goto]"); if (g) showTab(g.dataset.goto); });
   await reload(true);
   // Messagerie chargée juste après le tableau de bord (pastille des messages non lus)
   setTimeout(startChat, 600);
@@ -53,12 +56,13 @@ async function talkTo(supplierId, supplierName) {
 async function reload(useCache = false) {
   const key = "co:" + me.uid;
   const fetcher = async () => {
-    const [c, r, o] = await Promise.all([
+    const [c, r, o, rv] = await Promise.all([
       get("companies", me.uid),
       list("rfqs", where("companyId", "==", me.uid)),
       list("offers", where("companyId", "==", me.uid)),
+      list("reviews", where("companyId", "==", me.uid)).catch(() => []),
     ]);
-    return { company: c, rfqs: r, offers: o };
+    return { company: c, rfqs: r, offers: o, reviews: rv };
   };
   if (useCache) return swr(key, fetcher, apply);
   const d = JSON.parse(JSON.stringify(await fetcher()));
@@ -70,6 +74,8 @@ function apply(d) {
   company = d.company || { name: myName };
   rfqs = d.rfqs.sort(byDateDesc);
   offers = d.offers;
+  myReviews = d.reviews || [];
+  favorites.clear(); (company.favorites || []).forEach(id => favorites.add(id));
   $("#who").textContent = company.name;
   renderStatus();
   renderDashboard();
@@ -91,11 +97,24 @@ function renderStatus() {
 function renderDashboard() {
   const open = rfqs.filter(r => r.status === "open").length;
   const pending = offers.filter(o => o.status === "pending").length;
+  const won = offers.filter(o => o.status === "accepted");
+  const byCur = {};
+  won.forEach(o => (byCur[o.currency || ""] = (byCur[o.currency || ""] || 0) + (o.price || 0)));
+  const curs = Object.keys(byCur).sort((a, b) => byCur[b] - byCur[a]);
   $("#stats").innerHTML = `
     <div class="stat"><span>${rfqs.length}</span>Demandes publiées</div>
     <div class="stat"><span>${open}</span>Demandes ouvertes</div>
     <div class="stat"><span>${offers.length}</span>Offres reçues</div>
-    <div class="stat stat-accent"><span>${pending}</span>Offres à examiner</div>`;
+    <div class="stat stat-accent"><span>${pending}</span>Offres à examiner</div>
+    <div class="stat"><span class="stat-money">${curs.length ? esc(fmtMoney(byCur[curs[0]], curs[0])) : "0"}</span>Montant engagé${curs.length > 1 ? ` <small>(+ ${curs.length - 1} autre(s) devise(s))</small>` : ""}</div>
+    <div class="stat"><span>${new Set(won.map(o => o.supplierId)).size}</span>Fournisseurs retenus</div>`;
+  $("#completeBox").innerHTML = completenessCard(completeness(company, [
+    ["contactName", "nom du contact"], ["phone", "téléphone"], ["sector", "secteur"], ["address", "adresse"], ["city", "ville"], ["description", "présentation"],
+  ]), "fiche");
+  const toRate = won.filter(o => !myReviews.some(r => r.id === o.id));
+  $("#toRate").innerHTML = toRate.length ? `<div class="card"><h2 class="h3">Notez vos fournisseurs</h2><p class="muted small">Votre avis aide les autres entreprises à choisir.</p>
+    <ul class="feed">${toRate.map(o => `<li><span><strong>${esc(o.supplierName)}</strong> — ${esc(o.rfqTitle)}</span><button class="btn btn-sm btn-accent" data-rate="${esc(o.id)}">★ Noter</button></li>`).join("")}</ul></div>` : "";
+  $("#toRate").onclick = e => { const b = e.target.closest("[data-rate]"); if (b) reviewForm(offers.find(o => o.id === b.dataset.rate)); };
   const latest = offers.filter(o => o.status === "pending").sort(byDateDesc).slice(0, 5);
   $("#latestOffers").innerHTML = latest.length
     ? `<ul class="feed">${latest.map(o => `<li><button class="link" data-rfq="${esc(o.rfqId)}"><strong>${esc(o.supplierName)}</strong> a répondu à « ${esc(o.rfqTitle)} » : ${esc(fmtMoney(o.price, o.currency))}</button><span class="muted small">${fmtDate(o.createdAt)}</span></li>`).join("")}</ul>`
@@ -110,7 +129,7 @@ function renderRfqs() {
       <tbody>${rfqs.map(r => {
         const n = offersOf(r.id).length, p = offersOf(r.id).filter(o => o.status === "pending").length;
         return `<tr class="row-click" data-rfq="${esc(r.id)}" tabindex="0"><td><strong>${esc(r.title)}</strong><br><span class="muted small">Publiée le ${fmtDate(r.createdAt)}</span></td>
-          <td>${esc(r.category)}</td><td>${esc(r.deadline ? fmtDate(r.deadline) : "—")}</td>
+          <td>${esc(r.category)}</td><td>${esc(r.deadline ? fmtDate(r.deadline) : "—")}${r.status === "open" && r.deadline ? ` <span class="badge badge-${deadline(r.deadline).cls}">${deadline(r.deadline).label}</span>` : ""}</td>
           <td>${n}${p ? ` <span class="badge badge-warn">${p} nouvelle(s)</span>` : ""}</td><td>${badge(r.status)}</td></tr>`;
       }).join("")}</tbody></table></div>`
     : empty("Vous n'avez publié aucune demande de devis.", `<button class="btn btn-accent" onclick="document.getElementById('newRfq').click()">Publier ma première demande</button>`);
@@ -118,16 +137,18 @@ function renderRfqs() {
   $("#rfqList").onkeydown = e => { const r = e.target.closest("[data-rfq]"); if (r && e.key === "Enter") rfqDetail(r.dataset.rfq); };
 }
 
-function rfqForm(rfq = null, supplier = null) {
-  if (!rfq && !approved()) return toast(company.status === "suspended" ? "Votre compte est suspendu." : "Votre compte doit d'abord être validé par notre équipe.", "err");
+/** rfq : demande à modifier ; copy : republier une copie de cette demande (nouvelle demande pré-remplie) */
+function rfqForm(rfq = null, supplier = null, copy = false) {
+  const editing = rfq && !copy;
+  if (!editing && !approved()) return toast(company.status === "suspended" ? "Votre compte est suspendu." : "Votre compte doit d'abord être validé par notre équipe.", "err");
   const r = rfq || { category: supplier?.categories?.[0] || "", currency: APP.currencies[0], city: company.city || "" };
-  const dlg = modal(rfq ? "Modifier la demande" : "Nouvelle demande de devis", `
+  const dlg = modal(editing ? "Modifier la demande" : copy ? "Republier la demande" : "Nouvelle demande de devis", `
     ${supplier ? `<p class="notice">Votre demande sera visible par <strong>${esc(supplier.name)}</strong> et par tous les fournisseurs validés de la catégorie choisie.</p>` : ""}
     <form class="stack" id="rfqForm">
       <label class="field"><span>Titre de la demande *</span><input class="input" name="title" required maxlength="140" value="${esc(r.title)}" placeholder="Ex. : 5 000 cartons d'emballage 40×30×20"></label>
       <div class="form-grid">
         <label class="field"><span>Catégorie *</span><select class="input" name="category" required><option value="">Choisir…</option>${options(cats, r.category)}</select></label>
-        <label class="field"><span>Date limite des offres *</span><input class="input" type="date" name="deadline" required value="${esc(r.deadline)}" min="${new Date().toISOString().slice(0, 10)}"></label>
+        <label class="field"><span>Date limite des offres *</span><input class="input" type="date" name="deadline" required value="${esc(copy ? "" : r.deadline)}" min="${new Date().toISOString().slice(0, 10)}"></label>
         <label class="field"><span>Quantité</span><input class="input" type="number" min="0" step="any" name="quantity" value="${esc(r.quantity ?? "")}"></label>
         <label class="field"><span>Unité</span><input class="input" name="unit" maxlength="30" value="${esc(r.unit)}" placeholder="pièces, kg, tonnes, heures…"></label>
         <label class="field"><span>Budget indicatif</span><input class="input" type="number" min="0" step="any" name="budget" value="${esc(r.budget ?? "")}"></label>
@@ -135,7 +156,7 @@ function rfqForm(rfq = null, supplier = null) {
         <label class="field span-2"><span>Lieu de livraison *</span><input class="input" name="city" required maxlength="80" value="${esc(r.city)}"></label>
       </div>
       <label class="field"><span>Description détaillée *</span><textarea class="input" name="description" rows="6" required maxlength="4000" placeholder="Spécifications, normes, conditions de livraison et de paiement…">${esc(r.description)}</textarea></label>
-      <div class="form-actions"><button type="button" class="btn btn-ghost" data-cancel>Annuler</button><button class="btn btn-accent">${rfq ? "Enregistrer" : "Publier la demande"}</button></div>
+      <div class="form-actions"><button type="button" class="btn btn-ghost" data-cancel>Annuler</button><button class="btn btn-accent">${editing ? "Enregistrer" : "Publier la demande"}</button></div>
     </form>`, { wide: true });
   dlg.querySelector("[data-cancel]").onclick = () => dlg.close();
   const f = dlg.querySelector("form");
@@ -144,10 +165,10 @@ function rfqForm(rfq = null, supplier = null) {
     const v = formData(f);
     const btn = f.querySelector(".btn-accent"); busy(btn, true);
     try {
-      if (rfq) await updateDoc(doc(db, "rfqs", rfq.id), { ...v, updatedAt: now() });
+      if (editing) await updateDoc(doc(db, "rfqs", rfq.id), { ...v, updatedAt: now() });
       else await addDoc(collection(db, "rfqs"), { ...v, companyId: me.uid, companyName: company.name, status: "open", createdAt: now(), updatedAt: now() });
       dlg.close();
-      toast(rfq ? "Demande mise à jour." : "Demande publiée : les fournisseurs de la catégorie peuvent maintenant répondre.");
+      toast(editing ? "Demande mise à jour." : "Demande publiée : les fournisseurs de la catégorie peuvent maintenant répondre.");
       await reload();
     } catch (err) { toast(err.message, "err"); busy(btn, false); }
   };
@@ -168,7 +189,10 @@ async function rfqDetail(id) {
       <li><span>Date limite</span>${fmtDate(r.deadline)}</li>
     </ul>
     <p class="pre">${esc(r.description)}</p>
-    ${accepted && sup ? `<div class="notice notice-ok"><strong>Offre retenue : ${esc(sup.name)}</strong><br>Contact : ${esc(sup.contactName || "")} · <a href="tel:${esc(sup.phone)}">${esc(sup.phone)}</a> · <a href="mailto:${esc(sup.email)}">${esc(sup.email)}</a></div>` : ""}
+    ${accepted && sup ? `<div class="notice notice-ok"><strong>Offre retenue : ${esc(sup.name)}</strong><br>Contact : ${esc(sup.contactName || "")} · <a href="tel:${esc(sup.phone)}">${esc(sup.phone)}</a> · <a href="mailto:${esc(sup.email)}">${esc(sup.email)}</a>
+      <div style="margin-top:8px">${(() => { const rv = myReviews.find(x => x.id === accepted.id); return rv
+        ? `Votre avis : <span class="stars">${"★".repeat(rv.rating)}<i>${"★".repeat(5 - rv.rating)}</i></span> <button class="link" data-rate="${esc(accepted.id)}">Modifier</button>`
+        : `<button class="btn btn-sm btn-accent" data-rate="${esc(accepted.id)}">★ Noter ce fournisseur</button>`; })()}</div></div>` : ""}
     <h4>Offres reçues (${os.length})</h4>
     ${os.length ? `<div class="offers">${os.map(o => `
       <article class="offer">
@@ -181,6 +205,7 @@ async function rfqDetail(id) {
     <div class="form-actions">
       ${r.status === "open" ? `<button class="btn btn-ghost" data-edit>Modifier</button><button class="btn btn-ghost" data-close>Clôturer sans attribuer</button>` : ""}
       ${r.status === "closed" && approved() ? `<button class="btn btn-ghost" data-reopen>Rouvrir</button>` : ""}
+      ${r.status !== "open" && approved() ? `<button class="btn btn-ghost" data-copy>Republier</button>` : ""}
       ${!os.length ? `<button class="btn btn-danger" data-del>Supprimer</button>` : ""}
     </div>`, { wide: true });
 
@@ -189,6 +214,8 @@ async function rfqDetail(id) {
     const t = e.target.closest("button");
     if (!t) return;
     if (t.dataset.talk) { dlg.close(); talkTo(t.dataset.talk, t.dataset.name); return; }
+    if (t.dataset.rate) { dlg.close(); reviewForm(offers.find(o => o.id === t.dataset.rate)); return; }
+    if ("copy" in t.dataset) { dlg.close(); rfqForm(r, null, true); return; }
     if (t.dataset.accept) {
       if (!(await confirmBox("Accepter cette offre ? Les autres offres seront refusées et la demande sera attribuée."))) return;
       act(async () => {
@@ -225,7 +252,7 @@ function renderProfile() {
         <label class="field"><span>Pays *</span><input class="input" name="country" required maxlength="60" value="${esc(c.country)}"></label>
       </div>
       <label class="field"><span>Présentation</span><textarea class="input" name="description" rows="4" maxlength="2000">${esc(c.description)}</textarea></label>
-      <p class="muted small">E-mail du compte : ${esc(me.email)}</p>
+      <p class="muted small">E-mail du compte : ${esc(me.email)} · <button type="button" class="link" id="pwdReset">Changer mon mot de passe</button></p>
       <div class="form-actions"><button class="btn btn-primary">Enregistrer</button></div>
     </form>`;
   const f = $("#profileForm");
@@ -242,5 +269,59 @@ function renderProfile() {
     busy(btn, false);
   };
 }
+
+/** Avis (1 à 5 étoiles) sur un fournisseur dont l'offre a été acceptée */
+function reviewForm(o) {
+  if (!o) return;
+  const rv = myReviews.find(x => x.id === o.id) || { rating: 0, comment: "" };
+  const dlg = modal(`Noter ${o.supplierName}`, `
+    <form class="stack">
+      <p class="muted small">Demande : ${esc(o.rfqTitle)}</p>
+      <div class="rate-input" role="radiogroup" aria-label="Note">${[5, 4, 3, 2, 1].map(n => `<label><input type="radio" name="rating" value="${n}" ${rv.rating === n ? "checked" : ""} required><span>★</span></label>`).join("")}</div>
+      <label class="field"><span>Commentaire (visible dans le catalogue)</span><textarea class="input" name="comment" rows="4" maxlength="1000" placeholder="Qualité, respect des délais, communication…">${esc(rv.comment)}</textarea></label>
+      <div class="form-actions"><button type="button" class="btn btn-ghost" data-cancel>Annuler</button><button class="btn btn-accent">Publier mon avis</button></div>
+    </form>`);
+  dlg.querySelector("[data-cancel]").onclick = () => dlg.close();
+  const f = dlg.querySelector("form");
+  f.onsubmit = async e => {
+    e.preventDefault();
+    const rating = Number(f.rating.value), comment = f.comment.value.trim();
+    const btn = f.querySelector(".btn-accent"); busy(btn, true);
+    try {
+      if (myReviews.some(x => x.id === o.id)) await updateDoc(doc(db, "reviews", o.id), { rating, comment, updatedAt: now() });
+      else await setDoc(doc(db, "reviews", o.id), { supplierId: o.supplierId, companyId: me.uid, companyName: company.name, rfqTitle: o.rfqTitle, rating, comment, createdAt: now() });
+      dlg.close(); toast("Merci ! Votre avis est publié."); await reload();
+    } catch (err) { toast(err.message, "err"); busy(btn, false); }
+  };
+}
+
+/** Favoris : ajout / retrait immédiat, enregistré dans la fiche entreprise */
+async function toggleFavorite(supplierId, on) {
+  on ? favorites.add(supplierId) : favorites.delete(supplierId);
+  try {
+    await updateDoc(doc(db, "companies", me.uid), { favorites: on ? arrayUnion(supplierId) : arrayRemove(supplierId) });
+    company.favorites = [...favorites];
+    toast(on ? "Ajouté à vos favoris." : "Retiré de vos favoris.");
+  } catch (err) { on ? favorites.delete(supplierId) : favorites.add(supplierId); toast(err.message, "err"); }
+}
+
+/** Export Excel (CSV) des demandes et des offres reçues */
+function exportCSV() {
+  const rows = [["Demande", "Catégorie", "Statut", "Publiée le", "Date limite", "Quantité", "Unité", "Lieu", "Fournisseur", "Prix", "Devise", "Délai", "Statut de l'offre"]];
+  const label = { open: "Ouverte", closed: "Fermée", awarded: "Attribuée", pending: "En attente", accepted: "Acceptée", rejected: "Refusée" };
+  rfqs.forEach(r => {
+    const os = offersOf(r.id);
+    const base = [r.title, r.category, label[r.status] || r.status, fmtDate(r.createdAt), r.deadline || "", r.quantity ?? "", r.unit || "", r.city || ""];
+    if (!os.length) rows.push([...base, "", "", "", "", ""]);
+    os.forEach(o => rows.push([...base, o.supplierName, o.price, o.currency, o.delay || "", label[o.status] || o.status]));
+  });
+  downloadCSV(`demandes-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+}
+
+document.addEventListener("click", async e => {
+  if (e.target.id !== "pwdReset") return;
+  try { await resetPassword(me.email); toast(`E-mail envoyé à ${me.email} : suivez le lien pour choisir un nouveau mot de passe.`); }
+  catch (err) { toast(err.message, "err"); }
+});
 
 init().catch(err => { console.error(err); toast(err.message, "err"); });

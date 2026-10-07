@@ -58,7 +58,8 @@ service cloud.firestore {
       allow create: if isCompany() && uid() == companyId && data().status == "pending"
         && validOrg(data()) && optStr(data(), "sector", 80);
       allow update: if (isCompany() && uid() == companyId && !changed().hasAny(["status"])
-          && validOrg(data()) && optStr(data(), "sector", 80))
+          && validOrg(data()) && optStr(data(), "sector", 80)
+          && (!("favorites" in data()) || (data().favorites is list && data().favorites.size() <= 300)))
         || isAdmin();
       allow delete: if isAdmin();
     }
@@ -190,6 +191,24 @@ service cloud.firestore {
         allow update: if false;
         allow delete: if isAdmin();
       }
+    }
+
+    // ---------- Avis sur les fournisseurs ----------
+    // Identifiant = celui de l'offre acceptée : une entreprise note un fournisseur seulement après avoir retenu son offre.
+    match /reviews/{offerId} {
+      function offer() { return get(/databases/$(database)/documents/offers/$(offerId)).data; }
+      function validReview(d) {
+        return d.rating is int && d.rating >= 1 && d.rating <= 5 && optStr(d, "comment", 1000)
+          && str(d.companyName, 120) && optStr(d, "rfqTitle", 140);
+      }
+      allow read: if true;
+      allow create: if isCompany() && data().companyId == uid()
+        && exists(/databases/$(database)/documents/offers/$(offerId))
+        && offer().status == "accepted" && offer().companyId == uid() && data().supplierId == offer().supplierId
+        && validReview(data());
+      allow update: if isCompany() && resource.data.companyId == uid()
+        && changed().hasOnly(["rating", "comment", "updatedAt"]) && validReview(data());
+      allow delete: if isAdmin();
     }
 
     // ---------- Paramètres (catégories) ----------

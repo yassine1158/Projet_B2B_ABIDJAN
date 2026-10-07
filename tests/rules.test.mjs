@@ -215,3 +215,25 @@ test("chacun ne met à jour que son dernier message et sa date de lecture", asyn
   await assertFails(updateDoc(doc(as("c1"), "conversations/c1_s1"), { supplierName: "Autre" }));
   await assertSucceeds(updateDoc(doc(as("s1"), "conversations/c1_s1"), { "readAt.s1": 3 }));
 });
+
+// ---- Avis et favoris ----
+test("une entreprise note un fournisseur seulement après avoir accepté son offre", async () => {
+  const review = { supplierId: "s1", companyId: "c1", companyName: "ACME", rfqTitle: "Cartons", rating: 5, comment: "Très bien" };
+  await setDoc(doc(as("s1"), "offers/r1_s1"), offer);
+  await assertFails(setDoc(doc(as("c1"), "reviews/r1_s1"), review)); // offre pas encore acceptée
+  await updateDoc(doc(as("c1"), "offers/r1_s1"), { status: "accepted" });
+  await assertFails(setDoc(doc(as("c2"), "reviews/r1_s1"), { ...review, companyId: "c2" }));
+  await assertFails(setDoc(doc(as("c1"), "reviews/r1_s1"), { ...review, supplierId: "s2" }));
+  await assertFails(setDoc(doc(as("c1"), "reviews/r1_s1"), { ...review, rating: 6 }));
+  await assertFails(setDoc(doc(as("s1"), "reviews/r1_s1"), review));
+  await assertSucceeds(setDoc(doc(as("c1"), "reviews/r1_s1"), review));
+  await assertSucceeds(getDoc(doc(anon(), "reviews/r1_s1")));
+  await assertSucceeds(updateDoc(doc(as("c1"), "reviews/r1_s1"), { rating: 4 }));
+  await assertFails(updateDoc(doc(as("c1"), "reviews/r1_s1"), { supplierId: "s2" }));
+});
+
+test("une entreprise gère ses fournisseurs favoris", async () => {
+  await assertSucceeds(updateDoc(doc(as("c1"), "companies/c1"), { favorites: ["s1"] }));
+  await assertFails(updateDoc(doc(as("c1"), "companies/c1"), { favorites: "s1" }));
+  await assertFails(updateDoc(doc(as("c2"), "companies/c1"), { favorites: ["s2"] }));
+});

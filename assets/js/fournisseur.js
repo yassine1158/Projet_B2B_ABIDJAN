@@ -2,16 +2,17 @@
 import {
   doc, addDoc, setDoc, updateDoc, deleteDoc, collection, writeBatch,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-lite.js";
-import { db, now, configured, requireRole, lastSession, list, get, where, categories, logout } from "./firebase.js";
+import { db, now, configured, requireRole, lastSession, list, get, where, categories, logout, resetPassword } from "./firebase.js";
 import { APP } from "./config.js";
 import { mountChat } from "./chat.js";
 import { swr, readCache, writeCache } from "./store.js";
 import {
   $, esc, brand, tabs, toast, modal, confirmBox, formData, busy, options, empty, badge, fmtDate, fmtMoney, byDateDesc, notConfigured,
+  downloadCSV, stars, deadline, completeness, completenessCard,
 } from "./ui.js";
 
 brand();
-let me, myName, chat = null, showTab, sup = { categories: [], status: "pending" }, cats = [], rfqs = [], offers = [], products = [], onlyMine = true, profileShown = false;
+let me, myName, chat = null, showTab, reviews = [], noOffer = false, sup = { categories: [], status: "pending" }, cats = [], rfqs = [], offers = [], products = [], onlyMine = true, profileShown = false;
 const approved = () => sup.status === "approved";
 
 async function init() {
@@ -28,6 +29,9 @@ async function init() {
   $("#newProduct").onclick = () => productForm();
   $("#onlyMine").onchange = e => { onlyMine = e.target.checked; renderRfqs(); };
   $("#rfqQ").oninput = renderRfqs;
+  $("#noOffer").onchange = e => { noOffer = e.target.checked; renderRfqs(); };
+  $("#exportOffers").onclick = exportCSV;
+  document.addEventListener("click", e => { const g = e.target.closest("[data-goto]"); if (g) showTab(g.dataset.goto); });
   categories().then(c => { cats = c; if (profileShown && !$("#profile").contains(document.activeElement)) renderProfile(); });
   await reload(true);
   // Messagerie chargée juste après le tableau de bord (pastille des messages non lus)
@@ -55,14 +59,15 @@ async function reload(useCache = false) {
     // Compte déjà connu comme validé : tout en parallèle. Sinon la fiche d'abord (les demandes ne sont lisibles qu'une fois validé).
     const knownApproved = (readCache(key) || {}).sup?.status === "approved";
     const openRfqs = () => list("rfqs", where("status", "==", "open")).catch(() => []);
-    const [s, o, p, r] = await Promise.all([
+    const [s, o, p, r, rv] = await Promise.all([
       get("suppliers", me.uid),
       list("offers", where("supplierId", "==", me.uid)),
       list("products", where("supplierId", "==", me.uid)),
       knownApproved ? openRfqs() : null,
+      list("reviews", where("supplierId", "==", me.uid)).catch(() => []),
     ]);
     const approvedNow = s && s.status === "approved";
-    return { sup: s, offers: o, products: p, rfqs: approvedNow ? (r || await openRfqs()) : [] };
+    return { sup: s, offers: o, products: p, rfqs: approvedNow ? (r || await openRfqs()) : [], reviews: rv };
   };
   if (useCache) return swr(key, fetcher, apply);
   const d = JSON.parse(JSON.stringify(await fetcher()));
@@ -72,6 +77,7 @@ async function reload(useCache = false) {
 
 function apply(d) {
   sup = d.sup || { name: myName, categories: [], status: "pending" };
+  reviews = (d.reviews || []).sort(byDateDesc);
   offers = d.offers.sort(byDateDesc); products = d.products.sort(byDateDesc); rfqs = d.rfqs.sort(byDateDesc);
   $("#who").textContent = sup.name;
   renderStatus(); renderDashboard(); renderRfqs(); renderOffers(); renderProducts();
@@ -89,20 +95,33 @@ function renderStatus() {
 const myOffer = rfqId => offers.find(o => o.rfqId === rfqId);
 const visibleRfqs = () => {
   const q = $("#rfqQ").value.trim().toLowerCase();
-  return rfqs.filter(r => (!onlyMine || (sup.categories || []).includes(r.category)) &&
+  return rfqs.filter(r => (!onlyMine || (sup.categories || []).includes(r.category)) && (!noOffer || !myOffer(r.id)) &&
     (!q || [r.title, r.description, r.city, r.category, r.companyName].join(" ").toLowerCase().includes(q)));
 };
 
 function renderDashboard() {
   const mine = rfqs.filter(r => (sup.categories || []).includes(r.category) && !myOffer(r.id)).length;
+  const won = offers.filter(o => o.status === "accepted"), decided = offers.filter(o => o.status !== "pending");
+  const byCur = {};
+  won.forEach(o => (byCur[o.currency || ""] = (byCur[o.currency || ""] || 0) + (o.price || 0)));
+  const cur = Object.keys(byCur).sort((a, b) => byCur[b] - byCur[a])[0];
+  const avg = reviews.length ? reviews.reduce((t, r) => t + r.rating, 0) / reviews.length : 0;
   $("#stats").innerHTML = `
     <div class="stat stat-accent"><span>${mine}</span>Demandes à traiter</div>
     <div class="stat"><span>${offers.filter(o => o.status === "pending").length}</span>Offres en attente</div>
-    <div class="stat"><span>${offers.filter(o => o.status === "accepted").length}</span>Offres gagnées</div>
-    <div class="stat"><span>${products.length}</span>Produits publiés</div>`;
+    <div class="stat"><span>${won.length}</span>Offres gagnées</div>
+    <div class="stat"><span>${decided.length ? Math.round(100 * won.length / decided.length) + " %" : "—"}</span>Taux de réussite</div>
+    <div class="stat"><span class="stat-money">${cur ? esc(fmtMoney(byCur[cur], cur)) : "0"}</span>Montant remporté</div>
+    <div class="stat"><span>${reviews.length ? avg.toFixed(1) + " ★" : "—"}</span>Note moyenne (${reviews.length} avis)</div>`;
+  $("#completeBox").innerHTML = completenessCard(completeness({ ...sup, _products: products.length ? "ok" : "" }, [
+    ["contactName", "nom du contact"], ["phone", "téléphone"], ["website", "site web"], ["address", "adresse"], ["city", "ville"],
+    ["description", "présentation"], ["categories", "catégories"], ["_products", "au moins un produit"],
+  ]), "fiche");
+  $("#myReviews").innerHTML = reviews.length ? `<div class="card"><h2 class="h3">Avis des entreprises ${stars(avg, reviews.length)}</h2>
+    ${reviews.slice(0, 5).map(r => `<blockquote class="review"><span class="stars">${"★".repeat(r.rating)}<i>${"★".repeat(5 - r.rating)}</i></span> <b>${esc(r.companyName)}</b> <small class="muted">${esc(r.rfqTitle || "")} · ${fmtDate(r.createdAt)}</small>${r.comment ? `<p>${esc(r.comment)}</p>` : ""}</blockquote>`).join("")}</div>` : "";
   const latest = rfqs.filter(r => (sup.categories || []).includes(r.category) && !myOffer(r.id)).slice(0, 5);
   $("#latestRfqs").innerHTML = !approved() ? empty("Les demandes de devis s'afficheront ici après la validation de votre compte.")
-    : latest.length ? `<ul class="feed">${latest.map(r => `<li><button class="link" data-rfq="${esc(r.id)}"><strong>${esc(r.title)}</strong> — ${esc(r.companyName)}, ${esc(r.city)}</button><span class="muted small">avant le ${fmtDate(r.deadline)}</span></li>`).join("")}</ul>`
+    : latest.length ? `<ul class="feed">${latest.map(r => `<li><button class="link" data-rfq="${esc(r.id)}"><strong>${esc(r.title)}</strong> — ${esc(r.companyName)}, ${esc(r.city)}</button><span class="badge badge-${deadline(r.deadline).cls}">${deadline(r.deadline).label}</span></li>`).join("")}</ul>`
     : empty("Aucune nouvelle demande dans vos catégories pour le moment.");
   $("#latestRfqs").onclick = e => { const b = e.target.closest("[data-rfq]"); if (b) rfqDetail(b.dataset.rfq); };
 }
@@ -117,7 +136,7 @@ function renderRfqs() {
       <h3>${esc(r.title)}</h3>
       <p class="clamp">${esc(r.description)}</p>
       <p class="muted small">${esc(r.companyName)} · ${esc(r.city)}${r.quantity != null ? " · " + esc(r.quantity + " " + (r.unit || "")) : ""}</p>
-      <p class="small"><strong>Date limite :</strong> ${fmtDate(r.deadline)}</p>
+      <p class="small"><strong>Date limite :</strong> ${fmtDate(r.deadline)} <span class="badge badge-${deadline(r.deadline).cls}">${deadline(r.deadline).label}</span></p>
     </article>`;
   }).join("")}</div>` : empty(onlyMine ? "Aucune demande ouverte dans vos catégories. Décochez le filtre pour tout voir." : "Aucune demande ouverte.");
   $("#rfqList").onclick = e => { const c = e.target.closest("[data-rfq]"); if (c) rfqDetail(c.dataset.rfq); };
@@ -197,14 +216,19 @@ async function renderOffers() {
 function renderProducts() {
   $("#productList").innerHTML = products.length ? `<div class="table-wrap"><table class="table">
     <thead><tr><th>Produit / service</th><th>Catégorie</th><th>Prix indicatif</th><th>Commande min.</th><th></th></tr></thead>
-    <tbody>${products.map(p => `<tr><td><strong>${esc(p.name)}</strong><br><span class="muted small clamp">${esc(p.description)}</span></td>
+    <tbody>${products.map(p => `<tr><td><strong>${esc(p.name)}</strong> ${p.available === false ? '<span class="badge badge-danger">Rupture</span>' : '<span class="badge badge-ok">Disponible</span>'}<br><span class="muted small clamp">${esc(p.description)}</span></td>
       <td>${esc(p.category)}</td><td>${p.price != null ? esc(fmtMoney(p.price, p.currency)) + (p.unit ? " / " + esc(p.unit) : "") : "Sur devis"}</td><td>${esc(p.minOrder || "—")}</td>
-      <td class="nowrap"><button class="btn btn-sm btn-ghost" data-edit="${esc(p.id)}">Modifier</button> <button class="btn btn-sm btn-danger" data-del="${esc(p.id)}">Supprimer</button></td></tr>`).join("")}
+      <td class="nowrap"><button class="btn btn-sm btn-ghost" data-stock="${esc(p.id)}">${p.available === false ? "Remettre en stock" : "Marquer en rupture"}</button> <button class="btn btn-sm btn-ghost" data-edit="${esc(p.id)}">Modifier</button> <button class="btn btn-sm btn-danger" data-del="${esc(p.id)}">Supprimer</button></td></tr>`).join("")}
     </tbody></table></div>` : empty("Ajoutez vos produits et services pour apparaître dans les recherches des entreprises.");
   $("#productList").onclick = async e => {
     const t = e.target.closest("button");
     if (!t) return;
     if (t.dataset.edit) productForm(products.find(p => p.id === t.dataset.edit));
+    if (t.dataset.stock) {
+      const p = products.find(x => x.id === t.dataset.stock);
+      try { await updateDoc(doc(db, "products", p.id), { available: p.available === false, updatedAt: now() }); toast(p.available === false ? "Produit de nouveau disponible." : "Produit marqué en rupture de stock."); await reload(); }
+      catch (err) { toast(err.message, "err"); }
+    }
     if (t.dataset.del && await confirmBox("Supprimer ce produit ?")) {
       try { await deleteDoc(doc(db, "products", t.dataset.del)); toast("Produit supprimé."); await reload(); }
       catch (err) { toast(err.message, "err"); }
@@ -260,7 +284,7 @@ function renderProfile() {
       <fieldset class="field"><legend>Catégories * <small class="muted">(vous recevez les demandes de devis de ces catégories)</small></legend>
         <div class="checks">${cats.map(c => `<label class="check"><input type="checkbox" name="categories" value="${esc(c)}" ${(s.categories || []).includes(c) ? "checked" : ""}> ${esc(c)}</label>`).join("")}</div>
       </fieldset>
-      <p class="muted small">E-mail du compte (affiché aux entreprises) : ${esc(me.email)}</p>
+      <p class="muted small">E-mail du compte (affiché aux entreprises) : ${esc(me.email)} · <button type="button" class="link" id="pwdReset">Changer mon mot de passe</button></p>
       <div class="form-actions"><button class="btn btn-primary">Enregistrer</button></div>
     </form>`;
   const f = $("#profileForm");
@@ -285,5 +309,20 @@ function renderProfile() {
     busy(btn, false);
   };
 }
+
+/** Export Excel (CSV) des offres envoyées */
+function exportCSV() {
+  const label = { pending: "En attente", accepted: "Acceptée", rejected: "Refusée" };
+  downloadCSV(`offres-${new Date().toISOString().slice(0, 10)}.csv`, [
+    ["Demande", "Entreprise", "Prix", "Devise", "Délai", "Validité", "Envoyée le", "Statut"],
+    ...offers.map(o => [o.rfqTitle, o.companyName, o.price, o.currency, o.delay || "", o.validity || "", fmtDate(o.createdAt), label[o.status] || o.status]),
+  ]);
+}
+
+document.addEventListener("click", async e => {
+  if (e.target.id !== "pwdReset") return;
+  try { await resetPassword(me.email); toast(`E-mail envoyé à ${me.email} : suivez le lien pour choisir un nouveau mot de passe.`); }
+  catch (err) { toast(err.message, "err"); }
+});
 
 init().catch(err => { console.error(err); toast(err.message, "err"); });

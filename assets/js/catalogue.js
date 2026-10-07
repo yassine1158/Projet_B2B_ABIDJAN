@@ -1,13 +1,15 @@
 /* Catalogue des fournisseurs validés et de leurs produits (page publique + espace entreprise) */
 import { list, where, categories } from "./db.js";
 import { swr } from "./store.js";
-import { $, esc, modal, options, empty, fmtMoney } from "./ui.js";
+import { $, esc, modal, options, empty, fmtMoney, stars, ratingsBySupplier, fmtDate } from "./ui.js";
 
 const norm = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 /**
  * @param {HTMLElement} root  conteneur
- * @param {{ onQuote?: (supplier) => void, onMessage?: (supplier) => void }} opts  boutons « Demander un devis » / « Envoyer un message » (espace entreprise)
+ * @param {{ onQuote?: (supplier) => void, onMessage?: (supplier) => void,
+ *           favorites?: Set<string>, onFavorite?: (supplierId, on: boolean) => void }} opts
+ *   espace entreprise : boutons « Demander un devis », « Envoyer un message » et fournisseurs favoris
  */
 export async function mountCatalogue(root, opts = {}) {
   root.innerHTML = `
@@ -17,12 +19,15 @@ export async function mountCatalogue(root, opts = {}) {
       <div class="seg" role="group" aria-label="Affichage">
         <button type="button" class="seg-btn" data-view="suppliers" aria-pressed="true">Fournisseurs</button>
         <button type="button" class="seg-btn" data-view="products" aria-pressed="false">Produits</button>
+        ${opts.favorites ? '<button type="button" class="seg-btn" data-view="favorites" aria-pressed="false">★ Favoris</button>' : ""}
       </div>
     </div>
     <p class="muted small" id="catCount"></p>
     <div class="grid-cards" id="catList">${'<div class="card skel-card"></div>'.repeat(6)}</div>`;
 
-  let view = "suppliers", suppliers = [], products = [], byId = {}, loaded = false;
+  let view = "suppliers", suppliers = [], products = [], reviews = [], ratings = {}, byId = {}, loaded = false;
+  const fav = id => opts.favorites && opts.favorites.has(id);
+  const favBtn = id => opts.favorites ? `<button type="button" class="fav${fav(id) ? " on" : ""}" data-fav="${esc(id)}" aria-label="${fav(id) ? "Retirer des favoris" : "Ajouter aux favoris"}" title="Favori">${fav(id) ? "★" : "☆"}</button>` : "";
   const preset = new URLSearchParams(location.search).get("cat");
   categories().then(cats => {
     $("#catCat", root).insertAdjacentHTML("beforeend", options(cats));
@@ -34,8 +39,8 @@ export async function mountCatalogue(root, opts = {}) {
     const q = norm($("#catQ", root).value);
     const cat = $("#catCat", root).value;
     let html, n;
-    if (view === "suppliers") {
-      const rows = suppliers.filter(s =>
+    if (view === "suppliers" || view === "favorites") {
+      const rows = suppliers.filter(s => (view !== "favorites" || fav(s.id)) &&
         (!cat || (s.categories || []).includes(cat)) &&
         (!q || norm([s.name, s.city, s.country, s.description, ...(s.categories || [])].join(" ")).includes(q) ||
           products.some(p => p.supplierId === s.id && norm(p.name).includes(q))));
@@ -44,7 +49,8 @@ export async function mountCatalogue(root, opts = {}) {
       html = rows.map(s => `
         <article class="card card-click" data-sup="${esc(s.id)}" tabindex="0">
           <div class="card-top"><div class="avatar">${esc(s.name.slice(0, 1).toUpperCase())}</div>
-            <div><h3>${esc(s.name)}</h3><p class="muted small">${esc([s.city, s.country].filter(Boolean).join(", "))}</p></div></div>
+            <div><h3>${esc(s.name)}</h3><p class="muted small">${esc([s.city, s.country].filter(Boolean).join(", "))}</p></div>${favBtn(s.id)}</div>
+          ${stars(ratings[s.id]?.avg || 0, ratings[s.id]?.count || 0)}
           <p class="clamp">${esc(s.description)}</p>
           <div class="tags">${(s.categories || []).slice(0, 4).map(c => `<span class="tag">${esc(c)}</span>`).join("")}</div>
           <p class="muted small">${products.filter(p => p.supplierId === s.id).length} produit(s) / service(s)</p>
@@ -61,11 +67,12 @@ export async function mountCatalogue(root, opts = {}) {
           <h3>${esc(p.name)}</h3>
           <p class="clamp">${esc(p.description)}</p>
           <p class="price">${p.price ? esc(fmtMoney(p.price, p.currency)) + (p.unit ? " / " + esc(p.unit) : "") : "Prix sur devis"}</p>
+          ${p.available === false ? '<span class="badge badge-danger">Rupture de stock</span>' : ""}
           <p class="muted small">par <strong>${esc(p.supplierName)}</strong>${p.minOrder ? " · min. " + esc(p.minOrder) : ""}</p>
         </article>`).join("");
     }
-    $("#catCount", root).textContent = n + (view === "suppliers" ? " fournisseur(s)" : " produit(s) / service(s)");
-    $("#catList", root).innerHTML = html || empty("Aucun résultat. Essayez une autre recherche ou catégorie.");
+    $("#catCount", root).textContent = n + (view === "products" ? " produit(s) / service(s)" : " fournisseur(s)");
+    $("#catList", root).innerHTML = html || empty(view === "favorites" ? "Aucun favori. Touchez ☆ sur la fiche d'un fournisseur pour l'ajouter." : "Aucun résultat. Essayez une autre recherche ou catégorie.");
   };
 
   const open = id => {
@@ -82,9 +89,12 @@ export async function mountCatalogue(root, opts = {}) {
       <div class="tags">${(s.categories || []).map(c => `<span class="tag">${esc(c)}</span>`).join("")}</div>
       <p class="pre">${esc(s.description)}</p>
       <ul class="kv">${contact}</ul>
+      <div class="detail-head">${stars(ratings[id]?.avg || 0, ratings[id]?.count || 0)} ${favBtn(id)}</div>
+      ${reviews.filter(r => r.supplierId === id).sort((x, y) => (y.createdAt?.seconds || 0) - (x.createdAt?.seconds || 0)).slice(0, 3).map(r => `
+        <blockquote class="review"><span class="stars">${"★".repeat(r.rating)}<i>${"★".repeat(5 - r.rating)}</i></span> <b>${esc(r.companyName)}</b> <small class="muted">${fmtDate(r.createdAt)}</small>${r.comment ? `<p>${esc(r.comment)}</p>` : ""}</blockquote>`).join("")}
       <h4>Produits & services (${prods.length})</h4>
       ${prods.length ? `<div class="table-wrap"><table class="table"><thead><tr><th>Produit</th><th>Catégorie</th><th>Prix indicatif</th><th>Min.</th></tr></thead><tbody>
-        ${prods.map(p => `<tr><td><strong>${esc(p.name)}</strong><br><span class="muted small">${esc(p.description)}</span></td><td>${esc(p.category)}</td>
+        ${prods.map(p => `<tr><td><strong>${esc(p.name)}</strong>${p.available === false ? ' <span class="badge badge-danger">Rupture</span>' : ""}<br><span class="muted small">${esc(p.description)}</span></td><td>${esc(p.category)}</td>
         <td>${p.price ? esc(fmtMoney(p.price, p.currency)) + (p.unit ? " / " + esc(p.unit) : "") : "Sur devis"}</td><td>${esc(p.minOrder || "—")}</td></tr>`).join("")}
       </tbody></table></div>` : `<p class="muted">Aucun produit publié pour le moment.</p>`}
       ${opts.onQuote || opts.onMessage ? `<div class="form-actions">${opts.onMessage ? `<button class="btn btn-ghost" data-msg>💬 Envoyer un message</button>` : ""}${opts.onQuote ? `<button class="btn btn-accent" data-quote>Publier une demande de devis</button>` : ""}</div>` : ""}`, { wide: true });
@@ -101,18 +111,30 @@ export async function mountCatalogue(root, opts = {}) {
     root.querySelectorAll("[data-view]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
     render();
   }));
-  $("#catList", root).onclick = e => { const c = e.target.closest("[data-sup]"); if (c) open(c.dataset.sup); };
+  // Favoris : bouton ☆ / ★ (liste et fiche)
+  const toggleFav = (btn) => {
+    const id = btn.dataset.fav, on = !fav(id);
+    opts.onFavorite(id, on);
+    document.querySelectorAll(`[data-fav="${CSS.escape(id)}"]`).forEach(b => { b.classList.toggle("on", on); b.textContent = on ? "★" : "☆"; });
+    if (view === "favorites") render();
+  };
+  document.addEventListener("click", e => { const f = e.target.closest("dialog [data-fav]"); if (f) toggleFav(f); });
+  $("#catList", root).onclick = e => {
+    const f = e.target.closest("[data-fav]"); if (f) { e.stopPropagation(); return toggleFav(f); }
+    const c = e.target.closest("[data-sup]"); if (c) open(c.dataset.sup);
+  };
   $("#catList", root).onkeydown = e => { const c = e.target.closest("[data-sup]"); if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); open(c.dataset.sup); } };
 
   // Affichage immédiat depuis le cache, puis données fraîches du serveur
   await swr("catalogue", async () => {
-    const [sup, prod] = await Promise.all([
+    const [sup, prod, rev] = await Promise.all([
       list("suppliers", where("status", "==", "approved")),
       list("products", where("supplierApproved", "==", true)),
+      list("reviews").catch(() => []),
     ]);
-    return { suppliers: sup, products: prod };
+    return { suppliers: sup, products: prod, reviews: rev };
   }, d => {
-    suppliers = d.suppliers; products = d.products;
+    suppliers = d.suppliers; products = d.products; reviews = d.reviews || []; ratings = ratingsBySupplier(reviews);
     byId = Object.fromEntries(suppliers.map(s => [s.id, s]));
     loaded = true;
     render();
