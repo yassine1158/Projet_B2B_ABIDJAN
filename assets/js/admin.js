@@ -1,6 +1,7 @@
 /* Espace administrateur : validation des fournisseurs, entreprises, demandes, catégories */
-import { doc, setDoc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { db, now, configured, requireRole, list, where, categories, logout } from "./firebase.js";
+import { doc, setDoc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-lite.js";
+import { db, now, configured, requireRole, lastSession, list, where, categories, logout } from "./firebase.js";
+import { swr, readCache, writeCache } from "./store.js";
 import {
   $, esc, brand, tabs, toast, modal, confirmBox, empty, badge, fmtDate, fmtMoney, byDateDesc, notConfigured,
 } from "./ui.js";
@@ -12,13 +13,16 @@ const coStatus = c => c.status || "pending";
 
 async function init() {
   if (!configured) return notConfigured($("main"));
+  // Affichage instantané des dernières données connues, pendant la vérification de la connexion
+  const pre = lastSession("admin"), cached = pre && readCache("admin");
+  tabs();
+  if (cached) { me = { uid: pre.uid, email: pre.email }; $("#who").textContent = pre.email; apply(cached); }
   const auth = await requireRole("admin");
   if (!auth) return;
   me = auth.user;
   $("#who").textContent = me.email;
   $("#logout").onclick = logout;
-  tabs();
-  await reload();
+  reload(true).catch(err => toast(err.message, "err"));
   document.querySelectorAll("[data-sf]").forEach(b => (b.onclick = () => {
     supFilter = b.dataset.sf;
     document.querySelectorAll("[data-sf]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
@@ -33,11 +37,23 @@ async function init() {
   renderCategories();
 }
 
-async function reload() {
-  [suppliers, companies, rfqs, offers, products, admins] = await Promise.all([
-    ...["suppliers", "companies", "rfqs", "offers", "products"].map(c => list(c)),
-    list("users", where("role", "==", "admin")),
-  ]);
+/** Toutes les collections en parallèle ; avec useCache, affichage immédiat de la dernière version connue. */
+async function reload(useCache = false) {
+  const fetcher = async () => {
+    const [s, c, r, o, p, a] = await Promise.all([
+      ...["suppliers", "companies", "rfqs", "offers", "products"].map(col => list(col)),
+      list("users", where("role", "==", "admin")),
+    ]);
+    return { suppliers: s, companies: c, rfqs: r, offers: o, products: p, admins: a };
+  };
+  if (useCache) return swr("admin", fetcher, apply);
+  const d = JSON.parse(JSON.stringify(await fetcher()));
+  writeCache("admin", d);
+  apply(d);
+}
+
+function apply(d) {
+  ({ suppliers, companies, rfqs, offers, products, admins } = d);
   [suppliers, companies, rfqs, offers].forEach(a => a.sort(byDateDesc));
   renderOverview(); renderSuppliers(); renderCompanies(); renderRfqs(); renderTeam();
 }

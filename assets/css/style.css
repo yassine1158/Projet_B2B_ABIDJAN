@@ -280,3 +280,15 @@ textarea.input { resize: vertical; }
 }
 
 .akwaba-sm { font: 800 1.5rem var(--f-display); background: linear-gradient(90deg, #f77f00, #f2b705 55%, #3ddc84); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 8px; }
+
+/* ===== Squelettes de chargement (affichés tant que les données arrivent) ===== */
+@keyframes shimmer { to { background-position: -200% 0; } }
+.skel-card, .stats:empty, #rfqList:empty, #offerList:empty, #productList:empty, #supplierList:empty, #companyList:empty, #teamList:empty, #latestOffers:empty, #latestRfqs:empty, #activity:empty {
+  background: linear-gradient(90deg, var(--tint) 25%, #eef2ee 37%, var(--tint) 63%) 0 0 / 200% 100%;
+  animation: shimmer 1.3s linear infinite; border-radius: var(--radius);
+}
+.skel-card { min-height: 150px; border: 0; }
+.stats:empty { min-height: 96px; }
+#rfqList:empty, #offerList:empty, #productList:empty, #supplierList:empty, #companyList:empty, #teamList:empty { min-height: 220px; }
+#latestOffers:empty, #latestRfqs:empty, #activity:empty { min-height: 120px; }
+@media (prefers-reduced-motion: reduce) { .skel-card, .stats:empty { animation: none; } }

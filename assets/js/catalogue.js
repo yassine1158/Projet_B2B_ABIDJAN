@@ -1,5 +1,6 @@
 /* Catalogue des fournisseurs validés et de leurs produits (page publique + espace entreprise) */
-import { list, where, categories } from "./firebase.js";
+import { list, where, categories } from "./db.js";
+import { swr } from "./store.js";
 import { $, esc, modal, options, empty, fmtMoney } from "./ui.js";
 
 const norm = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -19,20 +20,17 @@ export async function mountCatalogue(root, opts = {}) {
       </div>
     </div>
     <p class="muted small" id="catCount"></p>
-    <div class="grid-cards" id="catList"><div class="loading">Chargement…</div></div>`;
+    <div class="grid-cards" id="catList">${'<div class="card skel-card"></div>'.repeat(6)}</div>`;
 
-  let view = "suppliers";
-  const [cats, suppliers, products] = await Promise.all([
-    categories(),
-    list("suppliers", where("status", "==", "approved")),
-    list("products", where("supplierApproved", "==", true)),
-  ]).catch(err => { $("#catList", root).innerHTML = empty("Impossible de charger le catalogue : " + err.message); return []; });
-  if (!suppliers) return;
-
-  $("#catCat", root).insertAdjacentHTML("beforeend", options(cats));
-  const byId = Object.fromEntries(suppliers.map(s => [s.id, s]));
+  let view = "suppliers", suppliers = [], products = [], byId = {}, loaded = false;
+  const preset = new URLSearchParams(location.search).get("cat");
+  categories().then(cats => {
+    $("#catCat", root).insertAdjacentHTML("beforeend", options(cats));
+    if (preset && cats.includes(preset)) { $("#catCat", root).value = preset; if (loaded) render(); }
+  });
 
   const render = () => {
+    if (!loaded) return; // garder le squelette tant qu'aucune donnée n'est arrivée
     const q = norm($("#catQ", root).value);
     const cat = $("#catCat", root).value;
     let html, n;
@@ -104,8 +102,18 @@ export async function mountCatalogue(root, opts = {}) {
   $("#catList", root).onclick = e => { const c = e.target.closest("[data-sup]"); if (c) open(c.dataset.sup); };
   $("#catList", root).onkeydown = e => { const c = e.target.closest("[data-sup]"); if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); open(c.dataset.sup); } };
 
-  const preset = new URLSearchParams(location.search).get("cat");
-  if (preset && cats.includes(preset)) $("#catCat", root).value = preset;
-  render();
+  // Affichage immédiat depuis le cache, puis données fraîches du serveur
+  await swr("catalogue", async () => {
+    const [sup, prod] = await Promise.all([
+      list("suppliers", where("status", "==", "approved")),
+      list("products", where("supplierApproved", "==", true)),
+    ]);
+    return { suppliers: sup, products: prod };
+  }, d => {
+    suppliers = d.suppliers; products = d.products;
+    byId = Object.fromEntries(suppliers.map(s => [s.id, s]));
+    loaded = true;
+    render();
+  }).catch(err => { if (!suppliers.length) $("#catList", root).innerHTML = empty("Impossible de charger le catalogue : " + err.message); });
   return { suppliers, products };
 }

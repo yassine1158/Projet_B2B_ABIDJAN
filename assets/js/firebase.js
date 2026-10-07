@@ -1,39 +1,58 @@
-/* Initialisation Firebase et accès aux données (Auth + Firestore) */
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+/* Authentification (espaces entreprise, fournisseur, admin) + accès aux données de db.js */
 import {
   getAuth, connectAuthEmulator, onAuthStateChanged, signOut,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {
-  getFirestore, connectFirestoreEmulator, doc, getDoc, collection, query, where, limit, getDocs,
-  serverTimestamp,
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { FIREBASE_CONFIG, USE_EMULATORS, DEFAULT_CATEGORIES } from "./config.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-lite.js";
+import { USE_EMULATORS } from "./config.js";
+import { app, db, HOME_OF } from "./db.js";
+import { readCache, writeCache, clearCache } from "./store.js";
 
-export const configured = !String(FIREBASE_CONFIG.apiKey).startsWith("VOTRE_") || USE_EMULATORS;
+export { app, db, configured, now, ROLES, HOME_OF, list, get, categories, where } from "./db.js";
 
-// Émulateurs : projet de démonstration local « demo-b2b » (aucune donnée réelle)
-export const app = initializeApp(USE_EMULATORS ? { ...FIREBASE_CONFIG, apiKey: "demo", projectId: "demo-b2b" } : FIREBASE_CONFIG);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+if (USE_EMULATORS) connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
 
-if (USE_EMULATORS) {
-  connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
-  connectFirestoreEmulator(db, "127.0.0.1", 8080);
+/** Lit le profil users/{uid} sur le serveur et le garde en cache. */
+async function fetchProfile(user) {
+  const snap = await getDoc(doc(db, "users", user.uid));
+  const profile = snap.exists() ? snap.data() : null;
+  if (profile) {
+    writeCache("profile:" + user.uid, { role: profile.role, displayName: profile.displayName || "" });
+    writeCache("session", { role: profile.role, uid: user.uid, email: user.email, displayName: profile.displayName || "" });
+  }
+  return profile;
 }
 
-export const now = serverTimestamp;
+/**
+ * Dernière session connue sur cet appareil (sans attendre Firebase Auth) : sert uniquement à afficher
+ * tout de suite les données en cache de cet utilisateur ; la connexion est vérifiée juste après.
+ */
+export function lastSession(role) {
+  const s = readCache("session");
+  return s && s.uid && s.role === role ? s : null;
+}
 
-export const ROLES = { company: "Entreprise", supplier: "Fournisseur", admin: "Administrateur" };
-export const HOME_OF = { company: "entreprise.html", supplier: "fournisseur.html", admin: "admin.html" };
-
-/** Attend l'état de connexion initial puis renvoie { user, profile } (profile = document users/{uid}). */
+/**
+ * Attend l'état de connexion initial puis renvoie { user, profile } (profile = document users/{uid}).
+ * Le profil en cache est utilisé immédiatement ; il est vérifié en arrière-plan
+ * (si le rôle a changé, par exemple nommé administrateur, la page se recharge).
+ */
 export function currentUser() {
   return new Promise(resolve => {
     const stop = onAuthStateChanged(auth, async user => {
       stop();
-      if (!user) return resolve({ user: null, profile: null });
-      const snap = await getDoc(doc(db, "users", user.uid)).catch(() => null);
-      resolve({ user, profile: snap && snap.exists() ? snap.data() : null });
+      if (!user) { writeCache("session", null); return resolve({ user: null, profile: null }); }
+      const cached = readCache("profile:" + user.uid);
+      if (cached && cached.role) {
+        resolve({ user, profile: cached });
+        fetchProfile(user).then(p => {
+          if (p && p.role === cached.role) return;
+          if (!p) writeCache("profile:" + user.uid, null); // évite toute boucle de rechargement
+          location.reload();
+        }).catch(() => {});
+        return;
+      }
+      resolve({ user, profile: await fetchProfile(user).catch(() => null) });
     });
   });
 }
@@ -47,22 +66,4 @@ export async function requireRole(role) {
   return { user, profile };
 }
 
-export const logout = () => signOut(auth).then(() => location.replace("index.html"));
-
-/** Lit tous les documents d'une requête sous forme de tableau [{ id, ...data }]. */
-export async function list(path, ...constraints) {
-  const snap = await getDocs(query(collection(db, path), ...constraints, limit(500)));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-}
-
-export async function get(path, id) {
-  const snap = await getDoc(doc(db, path, id));
-  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
-}
-
-export async function categories() {
-  const s = await get("settings", "categories").catch(() => null);
-  return s && Array.isArray(s.list) && s.list.length ? s.list : DEFAULT_CATEGORIES;
-}
-
-export { where };
+export const logout = () => { clearCache(); return signOut(auth).then(() => location.replace("index.html")); };

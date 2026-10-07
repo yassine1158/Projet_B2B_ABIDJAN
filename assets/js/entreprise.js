@@ -1,44 +1,64 @@
 /* Espace entreprise : catalogue, demandes de devis, offres reçues, fiche entreprise */
 import {
   doc, addDoc, setDoc, updateDoc, deleteDoc, collection, writeBatch,
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { db, now, configured, requireRole, list, get, where, categories, logout } from "./firebase.js";
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-lite.js";
+import { db, now, configured, requireRole, lastSession, list, get, where, categories, logout } from "./firebase.js";
 import { mountCatalogue } from "./catalogue.js";
+import { swr, readCache, writeCache } from "./store.js";
 import { APP } from "./config.js";
 import {
   $, esc, brand, tabs, toast, modal, confirmBox, formData, busy, options, empty, badge, fmtDate, fmtMoney, byDateDesc, notConfigured,
 } from "./ui.js";
 
 brand();
-let me, company, cats, rfqs = [], offers = [], catalogueLoaded = false;
+let me, myName, company = {}, cats = [], rfqs = [], offers = [], catalogueLoaded = false, profileShown = false;
 
 async function init() {
   if (!configured) return notConfigured($("main"));
-  const auth = await requireRole("company");
-  if (!auth) return;
-  me = auth.user;
-  $("#logout").onclick = logout;
-  [company, cats] = await Promise.all([get("companies", me.uid), categories()]);
-  company ||= { name: auth.profile.displayName || me.email };
-  $("#who").textContent = company.name;
-  renderStatus();
   tabs(name => {
     if (name === "catalogue" && !catalogueLoaded) { catalogueLoaded = true; mountCatalogue($("#catalogue"), { onQuote: s => rfqForm(null, s) }); }
   });
-  await reload();
+  // Affichage instantané des dernières données connues, pendant la vérification de la connexion
+  const pre = lastSession("company"), cached = pre && readCache("co:" + pre.uid);
+  if (cached) { me = { uid: pre.uid, email: pre.email }; myName = pre.displayName || pre.email; apply(cached); }
+  const auth = await requireRole("company");
+  if (!auth) return;
+  me = auth.user;
+  myName = auth.profile.displayName || me.email;
+  $("#logout").onclick = logout;
+  categories().then(c => (cats = c));
   $("#newRfq").onclick = () => rfqForm();
   $("#newRfq2").onclick = () => rfqForm();
-  renderProfile();
+  await reload(true);
 }
 
-async function reload() {
-  [rfqs, offers] = await Promise.all([
-    list("rfqs", where("companyId", "==", me.uid)),
-    list("offers", where("companyId", "==", me.uid)),
-  ]);
-  rfqs.sort(byDateDesc);
+/** Fiche, demandes et offres en parallèle ; avec useCache, affichage immédiat de la dernière version connue. */
+async function reload(useCache = false) {
+  const key = "co:" + me.uid;
+  const fetcher = async () => {
+    const [c, r, o] = await Promise.all([
+      get("companies", me.uid),
+      list("rfqs", where("companyId", "==", me.uid)),
+      list("offers", where("companyId", "==", me.uid)),
+    ]);
+    return { company: c, rfqs: r, offers: o };
+  };
+  if (useCache) return swr(key, fetcher, apply);
+  const d = JSON.parse(JSON.stringify(await fetcher()));
+  writeCache(key, d);
+  apply(d);
+}
+
+function apply(d) {
+  company = d.company || { name: myName };
+  rfqs = d.rfqs.sort(byDateDesc);
+  offers = d.offers;
+  $("#who").textContent = company.name;
+  renderStatus();
   renderDashboard();
   renderRfqs();
+  // ne pas effacer la fiche pendant que l'utilisateur la modifie
+  if (!profileShown || !$("#profile").contains(document.activeElement)) { renderProfile(); profileShown = true; }
 }
 
 const offersOf = id => offers.filter(o => o.rfqId === id);

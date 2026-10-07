@@ -1,42 +1,64 @@
 /* Espace fournisseur : demandes de devis ouvertes, offres, produits & services, fiche fournisseur */
 import {
   doc, addDoc, setDoc, updateDoc, deleteDoc, collection, writeBatch,
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { db, now, configured, requireRole, list, get, where, categories, logout } from "./firebase.js";
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-lite.js";
+import { db, now, configured, requireRole, lastSession, list, get, where, categories, logout } from "./firebase.js";
 import { APP } from "./config.js";
+import { swr, readCache, writeCache } from "./store.js";
 import {
   $, esc, brand, tabs, toast, modal, confirmBox, formData, busy, options, empty, badge, fmtDate, fmtMoney, byDateDesc, notConfigured,
 } from "./ui.js";
 
 brand();
-let me, sup, cats, rfqs = [], offers = [], products = [], onlyMine = true;
+let me, myName, sup = { categories: [], status: "pending" }, cats = [], rfqs = [], offers = [], products = [], onlyMine = true, profileShown = false;
 const approved = () => sup.status === "approved";
 
 async function init() {
   if (!configured) return notConfigured($("main"));
+  tabs();
+  // Affichage instantané des dernières données connues, pendant la vérification de la connexion
+  const pre = lastSession("supplier"), cached = pre && readCache("sup:" + pre.uid);
+  if (cached) { me = { uid: pre.uid, email: pre.email }; myName = pre.displayName || pre.email; apply(cached); }
   const auth = await requireRole("supplier");
   if (!auth) return;
   me = auth.user;
+  myName = auth.profile.displayName || me.email;
   $("#logout").onclick = logout;
-  [sup, cats] = await Promise.all([get("suppliers", me.uid), categories()]);
-  sup ||= { name: auth.profile.displayName || me.email, categories: [], status: "pending" };
-  $("#who").textContent = sup.name;
-  tabs();
-  await reload();
   $("#newProduct").onclick = () => productForm();
   $("#onlyMine").onchange = e => { onlyMine = e.target.checked; renderRfqs(); };
   $("#rfqQ").oninput = renderRfqs;
-  renderProfile();
+  categories().then(c => { cats = c; if (profileShown && !$("#profile").contains(document.activeElement)) renderProfile(); });
+  await reload(true);
 }
 
-async function reload() {
-  [offers, products, rfqs] = await Promise.all([
-    list("offers", where("supplierId", "==", me.uid)),
-    list("products", where("supplierId", "==", me.uid)),
-    approved() ? list("rfqs", where("status", "==", "open")) : [],
-  ]);
-  offers.sort(byDateDesc); products.sort(byDateDesc); rfqs.sort(byDateDesc);
+/** Fiche, offres, produits et demandes ouvertes en parallèle ; avec useCache, affichage immédiat. */
+async function reload(useCache = false) {
+  const key = "sup:" + me.uid;
+  const fetcher = async () => {
+    // Compte déjà connu comme validé : tout en parallèle. Sinon la fiche d'abord (les demandes ne sont lisibles qu'une fois validé).
+    const knownApproved = (readCache(key) || {}).sup?.status === "approved";
+    const openRfqs = () => list("rfqs", where("status", "==", "open")).catch(() => []);
+    const [s, o, p, r] = await Promise.all([
+      get("suppliers", me.uid),
+      list("offers", where("supplierId", "==", me.uid)),
+      list("products", where("supplierId", "==", me.uid)),
+      knownApproved ? openRfqs() : null,
+    ]);
+    const approvedNow = s && s.status === "approved";
+    return { sup: s, offers: o, products: p, rfqs: approvedNow ? (r || await openRfqs()) : [] };
+  };
+  if (useCache) return swr(key, fetcher, apply);
+  const d = JSON.parse(JSON.stringify(await fetcher()));
+  writeCache(key, d);
+  apply(d);
+}
+
+function apply(d) {
+  sup = d.sup || { name: myName, categories: [], status: "pending" };
+  offers = d.offers.sort(byDateDesc); products = d.products.sort(byDateDesc); rfqs = d.rfqs.sort(byDateDesc);
+  $("#who").textContent = sup.name;
   renderStatus(); renderDashboard(); renderRfqs(); renderOffers(); renderProducts();
+  if (!profileShown || !$("#profile").contains(document.activeElement)) { renderProfile(); profileShown = true; }
 }
 
 function renderStatus() {

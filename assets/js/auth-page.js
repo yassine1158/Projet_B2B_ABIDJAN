@@ -2,7 +2,7 @@
 import {
   createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, updateProfile,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-lite.js";
 import { auth, db, now, configured, currentUser, categories, HOME_OF, logout } from "./firebase.js";
 import { $, $$, esc, brand, toast, busy, formData, notConfigured } from "./ui.js";
 

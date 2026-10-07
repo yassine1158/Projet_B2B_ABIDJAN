@@ -49,6 +49,13 @@ Même application, version iOS. Apple n'autorise l'installation sur iPhone qu'av
 
 Sans ces clés, le workflow vérifie seulement que l'app iOS se construit.
 
+## Vitesse
+
+- **Firestore Lite** (au lieu de la version complète) : bibliothèque Firebase 3× plus légère sur les pages publiques ; l'accueil et le catalogue ne chargent même pas le module de connexion (`db.js`).
+- **Cache local** (`store.js`) : chaque page affiche immédiatement les dernières données connues, puis se met à jour en arrière-plan. Le profil et les catégories sont aussi gardés en cache. Tout est effacé à la déconnexion.
+- **Chargements en parallèle** : fiche, demandes, offres… sont demandées en même temps ; scripts préchargés (`modulepreload`) et connexions ouvertes à l'avance (`preconnect`) ; polices non bloquantes ; squelettes de chargement.
+- Mesuré sur une connexion lente simulée (300 ms de latence, ~1,6 Mbit/s) : accueil 2,9 s → 1,3 s ; tableau de bord 3,5 s → 1,0 s ; catalogue 3,3 s → 1,0 s.
+
 ## Technique
 
 - Site statique (HTML/CSS/JavaScript, sans build). Il peut être hébergé sur **Firebase Hosting** ou sur **GitHub Pages**.

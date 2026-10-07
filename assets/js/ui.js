@@ -7,7 +7,8 @@ export const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;"
 
 export function fmtDate(v) {
   if (!v) return "—";
-  const d = v.toDate ? v.toDate() : new Date(v);
+  // Timestamp Firestore, ou sa version en cache { seconds, nanoseconds }, ou date texte
+  const d = v.toDate ? v.toDate() : v.seconds != null ? new Date(v.seconds * 1000) : new Date(v);
   return isNaN(d) ? "—" : d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
 }
 
