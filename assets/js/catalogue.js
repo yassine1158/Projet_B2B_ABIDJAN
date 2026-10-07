@@ -7,7 +7,7 @@ const norm = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLow
 
 /**
  * @param {HTMLElement} root  conteneur
- * @param {{ onQuote?: (supplier) => void }} opts  bouton « Demander un devis » (espace entreprise)
+ * @param {{ onQuote?: (supplier) => void, onMessage?: (supplier) => void }} opts  boutons « Demander un devis » / « Envoyer un message » (espace entreprise)
  */
 export async function mountCatalogue(root, opts = {}) {
   root.innerHTML = `
@@ -87,9 +87,11 @@ export async function mountCatalogue(root, opts = {}) {
         ${prods.map(p => `<tr><td><strong>${esc(p.name)}</strong><br><span class="muted small">${esc(p.description)}</span></td><td>${esc(p.category)}</td>
         <td>${p.price ? esc(fmtMoney(p.price, p.currency)) + (p.unit ? " / " + esc(p.unit) : "") : "Sur devis"}</td><td>${esc(p.minOrder || "—")}</td></tr>`).join("")}
       </tbody></table></div>` : `<p class="muted">Aucun produit publié pour le moment.</p>`}
-      ${opts.onQuote ? `<div class="form-actions"><button class="btn btn-accent" data-quote>Publier une demande de devis</button></div>` : ""}`, { wide: true });
+      ${opts.onQuote || opts.onMessage ? `<div class="form-actions">${opts.onMessage ? `<button class="btn btn-ghost" data-msg>💬 Envoyer un message</button>` : ""}${opts.onQuote ? `<button class="btn btn-accent" data-quote>Publier une demande de devis</button>` : ""}</div>` : ""}`, { wide: true });
     const q = dlg.querySelector("[data-quote]");
     if (q) q.onclick = () => { dlg.close(); opts.onQuote(s); };
+    const m = dlg.querySelector("[data-msg]");
+    if (m) m.onclick = () => { dlg.close(); opts.onMessage(s); };
   };
 
   $("#catQ", root).oninput = render;

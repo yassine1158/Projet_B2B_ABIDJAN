@@ -4,18 +4,19 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-lite.js";
 import { db, now, configured, requireRole, lastSession, list, get, where, categories, logout } from "./firebase.js";
 import { APP } from "./config.js";
+import { mountChat } from "./chat.js";
 import { swr, readCache, writeCache } from "./store.js";
 import {
   $, esc, brand, tabs, toast, modal, confirmBox, formData, busy, options, empty, badge, fmtDate, fmtMoney, byDateDesc, notConfigured,
 } from "./ui.js";
 
 brand();
-let me, myName, sup = { categories: [], status: "pending" }, cats = [], rfqs = [], offers = [], products = [], onlyMine = true, profileShown = false;
+let me, myName, chat = null, showTab, sup = { categories: [], status: "pending" }, cats = [], rfqs = [], offers = [], products = [], onlyMine = true, profileShown = false;
 const approved = () => sup.status === "approved";
 
 async function init() {
   if (!configured) return notConfigured($("main"));
-  tabs();
+  showTab = tabs(name => { if (name === "messages") startChat(); });
   // Affichage instantané des dernières données connues, pendant la vérification de la connexion
   const pre = lastSession("supplier"), cached = pre && readCache("sup:" + pre.uid);
   if (cached) { me = { uid: pre.uid, email: pre.email }; myName = pre.displayName || pre.email; apply(cached); }
@@ -29,6 +30,22 @@ async function init() {
   $("#rfqQ").oninput = renderRfqs;
   categories().then(c => { cats = c; if (profileShown && !$("#profile").contains(document.activeElement)) renderProfile(); });
   await reload(true);
+  // Messagerie chargée juste après le tableau de bord (pastille des messages non lus)
+  setTimeout(startChat, 600);
+}
+
+function startChat() {
+  if (!chat && me && me.getIdToken && approved()) chat = mountChat($("#chat"), { me, role: "supplier", myName: sup.name || myName, onUnread: n => ($("#msgCount").textContent = n || "") });
+  if (!chat) $("#chat").innerHTML = empty("La messagerie sera disponible dès que votre compte sera validé.");
+  return chat;
+}
+
+/** Ouvre la conversation avec une entreprise (la crée si besoin). */
+async function talkTo(companyId, companyName) {
+  if (!approved()) return toast("La messagerie est disponible dès que votre compte est validé.", "err");
+  showTab("messages");
+  try { await startChat().start({ id: companyId, name: companyName }); }
+  catch (err) { toast("Impossible d'ouvrir la conversation : " + err.message, "err"); }
 }
 
 /** Fiche, offres, produits et demandes ouvertes en parallèle ; avec useCache, affichage immédiat. */
@@ -122,6 +139,7 @@ async function rfqDetail(id) {
       <li><span>Date limite</span>${fmtDate(r.deadline)}</li>
     </ul>
     <p class="pre">${esc(r.description)}</p>
+    <div class="form-actions" style="justify-content:flex-start;margin-top:4px"><button type="button" class="btn btn-sm btn-ghost" data-talk>💬 Contacter l'entreprise</button></div>
     <h4>${o ? "Votre offre " + badge(o.status) : "Votre offre"}</h4>
     ${editable ? `<form class="stack" id="offerForm">
       <div class="form-grid">
@@ -136,6 +154,7 @@ async function rfqDetail(id) {
       ${o.status === "accepted" ? `<div class="notice notice-ok">Félicitations, votre offre a été retenue. L'entreprise va vous contacter ; ses coordonnées figurent dans l'onglet « Mes offres ».</div>` : ""}`
       : `<p class="muted">Cette demande n'accepte plus d'offres.</p>`}`, { wide: true });
 
+  dlg.querySelector("[data-talk]").onclick = () => { dlg.close(); talkTo(r.companyId, r.companyName); };
   const f = dlg.querySelector("#offerForm");
   if (!f) return;
   f.onsubmit = async e => {

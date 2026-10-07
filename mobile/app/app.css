@@ -56,3 +56,6 @@ html.native { -webkit-tap-highlight-color: transparent; }
 
 .native .seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 .native .filters .input, .native .filters select.input { flex: 1 1 100%; }
+
+/* Messagerie plein écran dans l'application */
+.native .chat { height: calc(100dvh - 200px - env(safe-area-inset-bottom)); }

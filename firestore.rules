@@ -149,6 +149,49 @@ service cloud.firestore {
       }
     }
 
+    // ---------- Messagerie entreprise ⇄ fournisseur ----------
+    // Identifiant imposé : {entreprise}_{fournisseur} → une seule conversation par paire.
+    // Seuls les deux participants lisent et écrivent ; l'administrateur supervise (lecture, suppression).
+    match /conversations/{convId} {
+      function companyOk(id) {
+        return exists(/databases/$(database)/documents/companies/$(id))
+          && get(/databases/$(database)/documents/companies/$(id)).data.status == "approved";
+      }
+      function supplierOk(id) {
+        return exists(/databases/$(database)/documents/suppliers/$(id)) && supplierStatus(id) == "approved";
+      }
+
+      // resource == null : permet de vérifier si la conversation existe déjà (sans rien révéler d'autre)
+      allow read: if signedIn() && (resource == null || uid() in resource.data.participants) || isAdmin();
+
+      allow create: if signedIn()
+        && convId == data().companyId + "_" + data().supplierId
+        && data().participants == [data().companyId, data().supplierId]
+        && ((uid() == data().companyId && isApprovedCompany() && supplierOk(data().supplierId))
+          || (uid() == data().supplierId && isApprovedSupplier() && companyOk(data().companyId)))
+        && str(data().companyName, 120) && str(data().supplierName, 120)
+        && data().keys().hasOnly(["companyId", "supplierId", "participants", "companyName", "supplierName", "createdAt", "lastAt", "lastMessage", "lastSender", "readAt"]);
+
+      // Un participant met à jour le dernier message (le sien) et sa propre date de lecture
+      allow update: if signedIn() && uid() in resource.data.participants
+        && changed().hasOnly(["lastMessage", "lastAt", "lastSender", "readAt"])
+        && (!changed().hasAny(["lastMessage"]) || (data().lastSender == uid() && str(data().lastMessage, 200)))
+        && (!changed().hasAny(["readAt"]) || data().readAt.diff(resource.data.get("readAt", {})).affectedKeys().hasOnly([uid()]));
+
+      allow delete: if isAdmin();
+
+      match /messages/{msgId} {
+        function conv() { return get(/databases/$(database)/documents/conversations/$(convId)).data; }
+        allow read: if signedIn() && uid() in conv().participants || isAdmin();
+        allow create: if signedIn() && uid() in conv().participants
+          && data().senderId == uid()
+          && str(data().text, 2000) && data().text.size() > 0
+          && data().keys().hasOnly(["senderId", "senderName", "text", "createdAt"]);
+        allow update: if false;
+        allow delete: if isAdmin();
+      }
+    }
+
     // ---------- Paramètres (catégories) ----------
     match /settings/{id} {
       allow read: if true;

@@ -49,6 +49,15 @@ Même application, version iOS. Apple n'autorise l'installation sur iPhone qu'av
 
 Sans ces clés, le workflow vérifie seulement que l'app iOS se construit.
 
+## Messagerie (style Messenger)
+
+- Onglet **Messages** dans les espaces entreprise et fournisseur : liste des conversations, messages **en temps réel**, pastille des messages non lus, recherche. Sur smartphone, un seul panneau à la fois.
+- Démarrer une conversation : l'entreprise depuis la fiche d'un fournisseur (*Catalogue → Envoyer un message*) ou depuis une offre reçue (*Discuter*) ; le fournisseur depuis une demande de devis (*Contacter l'entreprise*).
+- Réservée aux comptes **validés**. Une seule conversation par paire entreprise ⇄ fournisseur.
+- **Administration → Messages** : l'équipe voit toutes les conversations, peut les lire et supprimer un message ou une conversation abusive.
+- Sécurité (`firestore.rules`) : seuls les deux participants lisent et écrivent ; personne ne peut écrire au nom d'un autre ni modifier un message envoyé.
+- Le temps réel utilise la version complète de Firestore, chargée seulement après l'affichage du tableau de bord (la page reste rapide).
+
 ## Vitesse
 
 - **Firestore Lite** (au lieu de la version complète) : bibliothèque Firebase 3× plus légère sur les pages publiques ; l'accueil et le catalogue ne chargent même pas le module de connexion (`db.js`).

@@ -24,6 +24,7 @@
   <link rel="modulepreload" href="assets/js/store.js">
   <link rel="modulepreload" href="assets/js/ui.js">
   <link rel="modulepreload" href="assets/js/config.js">
+  <link rel="modulepreload" href="assets/js/chat.js">
   <link rel="modulepreload" href="assets/js/catalogue.js">
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
@@ -38,6 +39,7 @@
     <button class="tab" role="tab" data-tab="accueil">Tableau de bord</button>
     <button class="tab" role="tab" data-tab="demandes">Mes demandes de devis</button>
     <button class="tab" role="tab" data-tab="catalogue">Catalogue fournisseurs</button>
+    <button class="tab" role="tab" data-tab="messages">Messages <span class="count" id="msgCount"></span></button>
     <button class="tab" role="tab" data-tab="fiche">Mon entreprise</button>
   </nav>
 </header>
@@ -55,6 +57,10 @@
   <section data-panel="catalogue" hidden>
     <div class="page-head"><h1>Catalogue fournisseurs</h1></div>
     <div id="catalogue"></div>
+  </section>
+  <section data-panel="messages" hidden>
+    <div class="page-head"><h1>Messages</h1></div>
+    <div id="chat"></div>
   </section>
   <section data-panel="fiche" hidden>
     <div class="page-head"><h1>Mon entreprise</h1></div>

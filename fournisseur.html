@@ -24,6 +24,7 @@
   <link rel="modulepreload" href="assets/js/store.js">
   <link rel="modulepreload" href="assets/js/ui.js">
   <link rel="modulepreload" href="assets/js/config.js">
+  <link rel="modulepreload" href="assets/js/chat.js">
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body class="app">
@@ -38,6 +39,7 @@
     <button class="tab" role="tab" data-tab="demandes">Demandes de devis</button>
     <button class="tab" role="tab" data-tab="offres">Mes offres</button>
     <button class="tab" role="tab" data-tab="produits">Produits & services</button>
+    <button class="tab" role="tab" data-tab="messages">Messages <span class="count" id="msgCount"></span></button>
     <button class="tab" role="tab" data-tab="fiche">Ma fiche</button>
   </nav>
 </header>
@@ -63,6 +65,10 @@
   <section data-panel="produits" hidden>
     <div class="page-head"><h1>Produits & services</h1><button class="btn btn-accent" id="newProduct">+ Ajouter</button></div>
     <div id="productList"></div>
+  </section>
+  <section data-panel="messages" hidden>
+    <div class="page-head"><h1>Messages</h1></div>
+    <div id="chat"></div>
   </section>
   <section data-panel="fiche" hidden>
     <div class="page-head"><h1>Ma fiche fournisseur</h1></div>

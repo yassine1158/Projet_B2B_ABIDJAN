@@ -12,9 +12,10 @@
     produits: '<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9"/>',
     fournisseurs: '<path d="M2 6h12v10H2zM14 9h4l4 4v3h-8"/><circle cx="6" cy="17.5" r="2"/><circle cx="17.5" cy="17.5" r="2"/>',
     categories: '<rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/>',
+    messages: '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/>',
     equipe: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 4 6"/>'
   };
-  var SHORT = { accueil: "Accueil", demandes: "Demandes", catalogue: "Catalogue", fiche: "Profil", offres: "Offres", produits: "Produits", fournisseurs: "Fourn.", entreprises: "Entreprises", categories: "Catégories", equipe: "Équipe" };
+  var SHORT = { accueil: "Accueil", demandes: "Demandes", catalogue: "Catalogue", fiche: "Profil", offres: "Offres", produits: "Produits", fournisseurs: "Fourn.", entreprises: "Entreprises", categories: "Catégories", equipe: "Équipe", messages: "Messages" };
 
   document.querySelectorAll("[data-tab]").forEach(function (b) {
     var k = b.dataset.tab;

@@ -4,6 +4,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-lite.js";
 import { db, now, configured, requireRole, lastSession, list, get, where, categories, logout } from "./firebase.js";
 import { mountCatalogue } from "./catalogue.js";
+import { mountChat } from "./chat.js";
 import { swr, readCache, writeCache } from "./store.js";
 import { APP } from "./config.js";
 import {
@@ -11,12 +12,13 @@ import {
 } from "./ui.js";
 
 brand();
-let me, myName, company = {}, cats = [], rfqs = [], offers = [], catalogueLoaded = false, profileShown = false;
+let me, myName, chat = null, showTab, company = {}, cats = [], rfqs = [], offers = [], catalogueLoaded = false, profileShown = false;
 
 async function init() {
   if (!configured) return notConfigured($("main"));
-  tabs(name => {
-    if (name === "catalogue" && !catalogueLoaded) { catalogueLoaded = true; mountCatalogue($("#catalogue"), { onQuote: s => rfqForm(null, s) }); }
+  showTab = tabs(name => {
+    if (name === "catalogue" && !catalogueLoaded) { catalogueLoaded = true; mountCatalogue($("#catalogue"), { onQuote: s => rfqForm(null, s), onMessage: s => talkTo(s.id, s.name) }); }
+    if (name === "messages") startChat();
   });
   // Affichage instantané des dernières données connues, pendant la vérification de la connexion
   const pre = lastSession("company"), cached = pre && readCache("co:" + pre.uid);
@@ -30,6 +32,21 @@ async function init() {
   $("#newRfq").onclick = () => rfqForm();
   $("#newRfq2").onclick = () => rfqForm();
   await reload(true);
+  // Messagerie chargée juste après le tableau de bord (pastille des messages non lus)
+  setTimeout(startChat, 600);
+}
+
+function startChat() {
+  if (!chat && me && me.getIdToken) chat = mountChat($("#chat"), { me, role: "company", myName: company.name || myName, onUnread: n => ($("#msgCount").textContent = n || "") });
+  return chat;
+}
+
+/** Ouvre la conversation avec un fournisseur (la crée si besoin). */
+async function talkTo(supplierId, supplierName) {
+  if (company.status !== "approved") return toast("La messagerie est disponible dès que votre compte est validé.", "err");
+  showTab("messages");
+  try { await startChat().start({ id: supplierId, name: supplierName }); }
+  catch (err) { toast("Impossible d'ouvrir la conversation : " + err.message, "err"); }
 }
 
 /** Fiche, demandes et offres en parallèle ; avec useCache, affichage immédiat de la dernière version connue. */
@@ -159,7 +176,7 @@ async function rfqDetail(id) {
         <div class="offer-price">${esc(fmtMoney(o.price, o.currency))}</div>
         <p class="muted small">Délai : ${esc(o.delay || "—")} · Validité : ${esc(o.validity || "—")} · Reçue le ${fmtDate(o.createdAt)}</p>
         ${o.message ? `<p class="pre">${esc(o.message)}</p>` : ""}
-        ${o.status === "pending" && r.status === "open" ? `<div class="form-actions"><button class="btn btn-sm btn-ghost" data-reject="${esc(o.id)}">Refuser</button><button class="btn btn-sm btn-primary" data-accept="${esc(o.id)}">Accepter cette offre</button></div>` : ""}
+        <div class="form-actions"><button class="btn btn-sm btn-ghost" data-talk="${esc(o.supplierId)}" data-name="${esc(o.supplierName)}">💬 Discuter</button>${o.status === "pending" && r.status === "open" ? `<button class="btn btn-sm btn-ghost" data-reject="${esc(o.id)}">Refuser</button><button class="btn btn-sm btn-primary" data-accept="${esc(o.id)}">Accepter cette offre</button>` : ""}</div>
       </article>`).join("")}</div>` : `<p class="muted">Pas encore d'offre. Les fournisseurs validés de la catégorie « ${esc(r.category)} » voient votre demande.</p>`}
     <div class="form-actions">
       ${r.status === "open" ? `<button class="btn btn-ghost" data-edit>Modifier</button><button class="btn btn-ghost" data-close>Clôturer sans attribuer</button>` : ""}
@@ -171,6 +188,7 @@ async function rfqDetail(id) {
   dlg.querySelector(".modal-body").onclick = async e => {
     const t = e.target.closest("button");
     if (!t) return;
+    if (t.dataset.talk) { dlg.close(); talkTo(t.dataset.talk, t.dataset.name); return; }
     if (t.dataset.accept) {
       if (!(await confirmBox("Accepter cette offre ? Les autres offres seront refusées et la demande sera attribuée."))) return;
       act(async () => {

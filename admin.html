@@ -38,6 +38,7 @@
     <button class="tab" role="tab" data-tab="fournisseurs">Fournisseurs <span class="count" id="pendingCount"></span></button>
     <button class="tab" role="tab" data-tab="entreprises">Entreprises <span class="count" id="coPendingCount"></span></button>
     <button class="tab" role="tab" data-tab="demandes">Demandes de devis</button>
+    <button class="tab" role="tab" data-tab="messages">Messages</button>
     <button class="tab" role="tab" data-tab="categories">Catégories</button>
     <button class="tab" role="tab" data-tab="equipe">Équipe</button>
   </nav>
@@ -73,6 +74,11 @@
   <section data-panel="demandes" hidden>
     <div class="page-head"><h1>Demandes de devis</h1></div>
     <div id="rfqList"></div>
+  </section>
+  <section data-panel="messages" hidden>
+    <div class="page-head"><h1>Messagerie</h1></div>
+    <p class="muted" style="margin:-8px 0 16px">Toutes les conversations entre entreprises et fournisseurs. Vous pouvez les lire et supprimer un message ou une conversation abusive.</p>
+    <div id="convList"></div>
   </section>
   <section data-panel="categories" hidden>
     <div class="page-head"><h1>Catégories</h1></div>

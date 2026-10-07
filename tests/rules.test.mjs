@@ -175,3 +175,43 @@ test("un administrateur nomme et retire les membres de l'équipe", async () => {
   await assertFails(updateDoc(doc(as("admin"), "users/admin"), { role: "company" }));
   await assertFails(getDocs(query(collection(as("c1"), "users"), where("role", "==", "admin"))));
 });
+
+// ---- Messagerie ----
+const conv = { companyId: "c1", supplierId: "s1", participants: ["c1", "s1"], companyName: "ACME", supplierName: "Pack SA", lastMessage: "", lastSender: "", readAt: {} };
+const msg = (uid, text = "Bonjour") => ({ senderId: uid, senderName: "X", text });
+
+test("une entreprise validée ouvre une conversation avec un fournisseur validé", async () => {
+  await assertFails(setDoc(doc(as("c1"), "conversations/c1_s2"), { ...conv, supplierId: "s2", participants: ["c1", "s2"] }));
+  await assertFails(setDoc(doc(as("c2"), "conversations/c2_s1"), { ...conv, companyId: "c2", participants: ["c2", "s1"] }));
+  await assertFails(setDoc(doc(as("c1"), "conversations/autre"), conv));
+  await assertFails(setDoc(doc(as("s2"), "conversations/c1_s1"), conv));
+  await assertSucceeds(getDoc(doc(as("c1"), "conversations/c1_s1"))); // n'existe pas encore : vérification permise
+  await assertSucceeds(setDoc(doc(as("s1"), "conversations/c1_s1"), conv));
+});
+
+test("seuls les participants (et l'admin) lisent et écrivent les messages", async () => {
+  await setDoc(doc(as("c1"), "conversations/c1_s1"), conv);
+  await assertSucceeds(setDoc(doc(as("c1"), "conversations/c1_s1/messages/m1"), msg("c1")));
+  await assertSucceeds(setDoc(doc(as("s1"), "conversations/c1_s1/messages/m2"), msg("s1")));
+  await assertFails(setDoc(doc(as("s1"), "conversations/c1_s1/messages/m3"), msg("c1")));
+  await assertFails(setDoc(doc(as("c2"), "conversations/c1_s1/messages/m4"), msg("c2")));
+  await assertFails(setDoc(doc(as("c1"), "conversations/c1_s1/messages/m5"), msg("c1", "")));
+  await assertFails(getDocs(collection(as("s2"), "conversations/c1_s1/messages")));
+  await assertFails(getDoc(doc(as("c2"), "conversations/c1_s1")));
+  await assertSucceeds(getDocs(collection(as("admin"), "conversations/c1_s1/messages")));
+  await assertSucceeds(getDocs(collection(as("admin"), "conversations")));
+  await assertSucceeds(getDocs(query(collection(as("c1"), "conversations"), where("participants", "array-contains", "c1"))));
+  await assertFails(getDocs(collection(as("c1"), "conversations")));
+  await assertFails(updateDoc(doc(as("c1"), "conversations/c1_s1/messages/m1"), { text: "modifié" }));
+  await assertFails(deleteDoc(doc(as("c1"), "conversations/c1_s1/messages/m1")));
+  await assertSucceeds(deleteDoc(doc(as("admin"), "conversations/c1_s1/messages/m1")));
+});
+
+test("chacun ne met à jour que son dernier message et sa date de lecture", async () => {
+  await setDoc(doc(as("c1"), "conversations/c1_s1"), conv);
+  await assertSucceeds(updateDoc(doc(as("c1"), "conversations/c1_s1"), { lastMessage: "Salut", lastSender: "c1", "readAt.c1": 1 }));
+  await assertFails(updateDoc(doc(as("c1"), "conversations/c1_s1"), { lastMessage: "Faux", lastSender: "s1" }));
+  await assertFails(updateDoc(doc(as("c1"), "conversations/c1_s1"), { "readAt.s1": 2 }));
+  await assertFails(updateDoc(doc(as("c1"), "conversations/c1_s1"), { supplierName: "Autre" }));
+  await assertSucceeds(updateDoc(doc(as("s1"), "conversations/c1_s1"), { "readAt.s1": 3 }));
+});

@@ -1,5 +1,5 @@
 /* Espace administrateur : validation des fournisseurs, entreprises, demandes, catégories */
-import { doc, setDoc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-lite.js";
+import { doc, setDoc, updateDoc, writeBatch, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-lite.js";
 import { db, now, configured, requireRole, lastSession, list, where, categories, logout } from "./firebase.js";
 import { swr, readCache, writeCache } from "./store.js";
 import {
@@ -7,7 +7,7 @@ import {
 } from "./ui.js";
 
 brand();
-let me, suppliers = [], companies = [], rfqs = [], offers = [], products = [], admins = [], supFilter = "pending", coFilter = "pending";
+let me, suppliers = [], companies = [], rfqs = [], offers = [], products = [], admins = [], convs = [], supFilter = "pending", coFilter = "pending";
 // Entreprises inscrites avant la validation des entreprises : considérées « en attente »
 const coStatus = c => c.status || "pending";
 
@@ -40,11 +40,12 @@ async function init() {
 /** Toutes les collections en parallèle ; avec useCache, affichage immédiat de la dernière version connue. */
 async function reload(useCache = false) {
   const fetcher = async () => {
-    const [s, c, r, o, p, a] = await Promise.all([
+    const [s, c, r, o, p, a, m] = await Promise.all([
       ...["suppliers", "companies", "rfqs", "offers", "products"].map(col => list(col)),
       list("users", where("role", "==", "admin")),
+      list("conversations"),
     ]);
-    return { suppliers: s, companies: c, rfqs: r, offers: o, products: p, admins: a };
+    return { suppliers: s, companies: c, rfqs: r, offers: o, products: p, admins: a, convs: m };
   };
   if (useCache) return swr("admin", fetcher, apply);
   const d = JSON.parse(JSON.stringify(await fetcher()));
@@ -54,8 +55,54 @@ async function reload(useCache = false) {
 
 function apply(d) {
   ({ suppliers, companies, rfqs, offers, products, admins } = d);
+  convs = (d.convs || []).sort((a, b) => (b.lastAt?.seconds || b.createdAt?.seconds || 0) - (a.lastAt?.seconds || a.createdAt?.seconds || 0));
   [suppliers, companies, rfqs, offers].forEach(a => a.sort(byDateDesc));
-  renderOverview(); renderSuppliers(); renderCompanies(); renderRfqs(); renderTeam();
+  renderOverview(); renderSuppliers(); renderCompanies(); renderRfqs(); renderTeam(); renderConvs();
+}
+
+/** Supervision de la messagerie : toutes les conversations, lecture et suppression des messages abusifs. */
+function renderConvs() {
+  $("#convList").innerHTML = convs.length ? `<div class="table-wrap"><table class="table">
+    <thead><tr><th>Entreprise</th><th>Fournisseur</th><th>Dernier message</th><th>Date</th></tr></thead>
+    <tbody>${convs.map(c => `<tr class="row-click" data-conv="${esc(c.id)}" tabindex="0"><td><strong>${esc(c.companyName)}</strong></td><td><strong>${esc(c.supplierName)}</strong></td>
+      <td class="small">${esc(c.lastMessage || "—")}</td><td>${fmtDate(c.lastAt || c.createdAt)}</td></tr>`).join("")}</tbody></table></div>`
+    : empty("Aucune conversation entre entreprises et fournisseurs pour le moment.");
+  $("#convList").onclick = e => { const r = e.target.closest("[data-conv]"); if (r) viewConv(r.dataset.conv); };
+}
+
+async function viewConv(id) {
+  const c = convs.find(x => x.id === id);
+  const dlg = modal(`${c.companyName} ⇄ ${c.supplierName}`, `<div class="admin-thread"><div class="loading">Chargement…</div></div>
+    <div class="form-actions"><button class="btn btn-danger" data-delconv>Supprimer la conversation</button></div>`, { wide: true });
+  const box = dlg.querySelector(".admin-thread");
+  const load = async () => {
+    const snap = await getDocs(query(collection(db, "conversations", id, "messages"), orderBy("createdAt")));
+    const msgs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    box.innerHTML = msgs.length ? msgs.map(m => `<div class="msg ${m.senderId === c.companyId ? "theirs" : "mine"}">
+      <small><b>${esc(m.senderName || (m.senderId === c.companyId ? c.companyName : c.supplierName))}</b> · ${fmtDate(m.createdAt)}</small>
+      <p>${esc(m.text)}</p><button class="link small" data-delmsg="${esc(m.id)}">Supprimer</button></div>`).join("")
+      : empty("Aucun message.");
+    return msgs;
+  };
+  let msgs = await load().catch(err => { box.innerHTML = empty(err.message); return []; });
+  dlg.querySelector(".modal-body").onclick = async e => {
+    const t = e.target.closest("button");
+    if (!t) return;
+    try {
+      if (t.dataset.delmsg) {
+        if (!(await confirmBox("Supprimer ce message ?"))) return;
+        const b = writeBatch(db); b.delete(doc(db, "conversations", id, "messages", t.dataset.delmsg)); await b.commit();
+        msgs = await load(); toast("Message supprimé.");
+      } else if ("delconv" in t.dataset) {
+        if (!(await confirmBox("Supprimer toute la conversation et ses messages ?"))) return;
+        const b = writeBatch(db);
+        msgs.forEach(m => b.delete(doc(db, "conversations", id, "messages", m.id)));
+        b.delete(doc(db, "conversations", id));
+        await b.commit();
+        dlg.close(); toast("Conversation supprimée."); await reload();
+      }
+    } catch (err) { toast(err.message, "err"); }
+  };
 }
 
 function renderOverview() {
@@ -69,7 +116,8 @@ function renderOverview() {
     <div class="stat"><span>${products.length}</span>Produits</div>
     <div class="stat"><span>${rfqs.filter(r => r.status === "open").length}</span>Demandes ouvertes</div>
     <div class="stat"><span>${offers.length}</span>Offres envoyées</div>
-    <div class="stat"><span>${offers.filter(o => o.status === "accepted").length}</span>Offres acceptées</div>`;
+    <div class="stat"><span>${offers.filter(o => o.status === "accepted").length}</span>Offres acceptées</div>
+    <div class="stat"><span>${convs.length}</span>Conversations</div>`;
   $("#pendingCount").textContent = n("pending") || "";
   $("#coPendingCount").textContent = nc("pending") || "";
   const recent = [
